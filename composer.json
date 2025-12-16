@@ -1,0 +1,41 @@
+{
+  "name": "michel/paper-orm",
+  "description": "PaperORM is a lightweight Object-Relational Mapping (ORM) library ",
+  "type": "library",
+  "license": "MPL-2.0",
+  "authors": [
+    {
+      "name": "Michel.F"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Michel\\PaperORM\\": "src",
+      "Test\\Michel\\PaperORM\\": "tests"
+    },
+    "files": [
+      "functions/helpers.php"
+    ]
+  },
+  "require": {
+    "php": ">=7.4",
+    "ext-pdo": "*",
+    "ext-json": "*",
+    "ext-ctype": "*",
+    "ext-iconv": "*",
+    "michel/php-sql-mapper": "^1.0",
+    "michel/console": "^1.0",
+    "michel/michel-package-starter": "^1.0",
+    "michel/filesystem": "^1.0",
+    "michel/psr14-event-dispatcher": "^1.0",
+    "psr/log": "^1.1|^2.0|^3.0"
+  },
+  "require-dev": {
+    "michel/unitester": "^1.0.0"
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": false
+    }
+  }
+}
