@@ -18,18 +18,14 @@ class DatabaseSyncCommand implements CommandInterface
 
     private EntityDirCollector $entityDirCollector;
 
-    private ?string $env;
-
     /**
      * @param PaperMigration $paperMigration
      * @param EntityDirCollector $entityDirCollector
-     * @param string|null $env
      */
-    public function __construct(PaperMigration $paperMigration, EntityDirCollector $entityDirCollector, ?string $env = null)
+    public function __construct(PaperMigration $paperMigration, EntityDirCollector $entityDirCollector)
     {
         $this->paperMigration = $paperMigration;
         $this->entityDirCollector = $entityDirCollector;
-        $this->env = $env;
     }
 
     public function getName(): string
@@ -58,9 +54,6 @@ class DatabaseSyncCommand implements CommandInterface
     {
         $io = ConsoleOutput::create($output);
         $verbose = $input->getOptionValue('verbose');
-        if (!$this->isEnabled()) {
-            throw new LogicException('This command is only available in `dev` environment.');
-        }
 
         if ($this->entityDirCollector->count() === 0) {
             $suggested = getcwd() . '/src/Entity';
@@ -128,8 +121,4 @@ class DatabaseSyncCommand implements CommandInterface
         $io->success("Database successfully synchronized.");
     }
 
-    private function isEnabled(): bool
-    {
-        return 'dev' === $this->env || 'test' === $this->env;
-    }
 }

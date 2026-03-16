@@ -57,7 +57,7 @@ class MichelPaperORMPackage implements PackageInterface
                 return new DatabaseDropCommand($container->get(EntityManagerInterface::class), $container->get('michel.environment'));
             },
             DatabaseSyncCommand::class => static function (ContainerInterface $container) {
-                return new DatabaseSyncCommand($container->get(PaperMigration::class), $container->get(EntityDirCollector::class), $container->get('michel.environment'));
+                return new DatabaseSyncCommand($container->get(PaperMigration::class), $container->get(EntityDirCollector::class));
             }
         ];
     }

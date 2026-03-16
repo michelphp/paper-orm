@@ -5,6 +5,7 @@ namespace Michel\PaperORM\Query;
 use InvalidArgumentException;
 use LogicException;
 use Michel\PaperORM\Cache\EntityMemcachedCache;
+use Michel\PaperORM\Entity\EntityInterface;
 use Michel\PaperORM\EntityManagerInterface;
 use Michel\PaperORM\Hydrator\ArrayHydrator;
 use Michel\PaperORM\Hydrator\EntityHydrator;
@@ -419,6 +420,20 @@ final class QueryBuilder
         }
 
         foreach ($this->params as $key => $value) {
+            if ($value instanceof EntityInterface) {
+                $value = $value->getPrimaryKeyValue();
+            }elseif (is_iterable($value)) {
+                $values = [];
+                foreach ($value as $k => $v) {
+                    if ($v instanceof EntityInterface) {
+                        $values[$k] = $v->getPrimaryKeyValue();
+                    }else {
+                        $values[$k] = $v;
+                    }
+                }
+                $value = $values;
+            }
+
             $joinQl->setParam($key, $value);
         }
 

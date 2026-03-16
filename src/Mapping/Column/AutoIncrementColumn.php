@@ -3,6 +3,7 @@
 namespace Michel\PaperORM\Mapping\Column;
 
 use Attribute;
+use Michel\PaperORM\Tools\IDBuilder;
 use Michel\PaperORM\Types\StringType;
 
 #[\Attribute(\Attribute::TARGET_PROPERTY | \Attribute::IS_REPEATABLE)]
@@ -36,7 +37,7 @@ final class AutoIncrementColumn extends Column
             ));
         }
 
-        $length = strlen($prefix) + $pad;
+        $length = ($prefix ? strlen(IDBuilder::generate($prefix)) : 0) + $pad;
         parent::__construct('', $name, StringType::class, $nullable, null, true, $length);
 
         $this->pad = $pad;
