@@ -2,7 +2,7 @@
 
 namespace Michel\PaperORM\Michel\Package;
 
-use Michel\Michel\Package\PackageInterface;
+use Michel\Package\PackageInterface;
 use Michel\PaperORM\Collector\EntityDirCollector;
 use Michel\PaperORM\Command\DatabaseCreateCommand;
 use Michel\PaperORM\Command\DatabaseDropCommand;
@@ -30,7 +30,7 @@ class MichelPaperORMPackage implements PackageInterface
                 );
                 $logger = $container->get('paper.orm.logger');
                 if ($logger) {
-                    $paperConf->withLogger($container->get('paper.orm.logger'));
+                    $paperConf->withLogger($logger);
                 }
                 return $paperConf;
             },

@@ -424,14 +424,14 @@ final class QueryBuilder
                 $value = $value->getPrimaryKeyValue();
             }elseif (is_iterable($value)) {
                 $values = [];
-                foreach ($value as $k => $v) {
+                foreach ($value as $v) {
                     if ($v instanceof EntityInterface) {
-                        $values[$k] = $v->getPrimaryKeyValue();
+                        $values[] = $v->getPrimaryKeyValue();
                     }else {
-                        $values[$k] = $v;
+                        $values[] = $v;
                     }
                 }
-                $value = $values;
+                $value = implode(',', $values);
             }
 
             $joinQl->setParam($key, $value);

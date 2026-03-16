@@ -10,7 +10,9 @@ final class MigrationDirectory
     public function __construct(string $dir)
     {
         if (!is_dir($dir)) {
-            throw new \InvalidArgumentException("Directory '$dir' does not exist.");
+            if (!mkdir($dir, 0777, true)) {
+                throw new \InvalidArgumentException("Cannot create directory '$dir', check permissions.");
+            }
         }
 
         if (!is_writable($dir)) {

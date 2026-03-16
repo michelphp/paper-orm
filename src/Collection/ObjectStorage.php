@@ -163,4 +163,14 @@ class ObjectStorage extends SplObjectStorage
         $this->detach($object);
         return $this;
     }
+
+    public static function fromArray(array $data): self
+    {
+        return new self($data);
+    }
+
+    public static function fromObjectStorage(ObjectStorage $storage): self
+    {
+        return new self($storage->toArray());
+    }
 }
