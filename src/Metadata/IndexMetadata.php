@@ -2,8 +2,6 @@
 
 namespace Michel\PaperORM\Metadata;
 
-use Michel\PaperORM\Mapping\Column\JoinColumn;
-
 final class IndexMetadata
 {
     private string $tableName;

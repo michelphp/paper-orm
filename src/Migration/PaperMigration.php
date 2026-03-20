@@ -3,6 +3,7 @@
 namespace Michel\PaperORM\Migration;
 
 use DateTime;
+use Michel\PaperORM\Mapper\IndexMapper;
 use PDOException;
 use Michel\PaperORM\Entity\EntityInterface;
 use Michel\PaperORM\EntityManagerInterface;
@@ -300,7 +301,7 @@ SQL;
                 $tableName = EntityMapper::getTable($entity);
                 $tables[$tableName] = [
                     'columns' => ColumnMapper::getColumns($entity),
-                    'indexes' => [] // TODO IndexMapper::getIndexes($entity)
+                    'indexes' => IndexMapper::getIndexes($entity)
                 ];
             }
         }

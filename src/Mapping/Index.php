@@ -2,7 +2,7 @@
 
 namespace Michel\PaperORM\Mapping;
 
-#[\Attribute(\Attribute::TARGET_CLASS)]
+#[\Attribute(\Attribute::TARGET_CLASS | \Attribute::IS_REPEATABLE)]
 final class Index
 {
     private array $columns;

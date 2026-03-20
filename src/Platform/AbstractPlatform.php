@@ -236,12 +236,11 @@ abstract class AbstractPlatform implements PlatformInterface
 
     final protected function generateIndexName(string $tableName, array $columnNames, bool $unique): string
     {
-        $hash = implode('', array_map(static function ($column) {
-            return dechex(crc32($column));
-        }, array_merge([$tableName], $columnNames)));
-
+        $signature = $tableName . implode('_', $columnNames);
+        $hash = hash('sha256', $signature);
         $prefix = $unique ? $this->getPrefixUniqIndexName() : $this->getPrefixIndexName();
-        return strtoupper(substr($prefix . $hash, 0, $this->getMaxLength()));
+
+        return strtoupper($prefix . substr($hash, 0, $this->getMaxLength() - strlen($prefix)));
     }
 
     final protected function generateForeignKeyName(string $tableName, array $columnNames): string

@@ -82,4 +82,9 @@ class CommentTest implements EntityInterface, TableMetadataInterface
         $this->post = $post;
         return $this;
     }
+
+    static public function getIndexes(): array
+    {
+        return [];
+    }
 }
