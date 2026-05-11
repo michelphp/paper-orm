@@ -68,17 +68,17 @@ class MigrationTest extends TestCase
                 $this->assertEquals($lines, array (
                     0 => '-- UP MIGRATION --',
                     1 => 'CREATE TABLE `user` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,`firstname` VARCHAR(255) NOT NULL,`lastname` VARCHAR(255) NOT NULL,`email` VARCHAR(255) NOT NULL,`password` VARCHAR(255) NOT NULL,`token` VARCHAR(32) NOT NULL,`is_active` BOOLEAN NOT NULL,`created_at` DATETIME,`last_post_id` INTEGER,FOREIGN KEY (`last_post_id`) REFERENCES `post` (id) ON DELETE SET NULL ON UPDATE NO ACTION);',
-                    2 => 'CREATE UNIQUE INDEX UNIQ_8D93D6495F37A13B ON `user` (`token`);',
-                    3 => 'CREATE UNIQUE INDEX UNIQ_8D93D6492D053F64 ON `user` (`last_post_id`);',
+                    2 => 'CREATE UNIQUE INDEX UNIQ_439C366749B149E ON `user` (`token`);',
+                    3 => 'CREATE UNIQUE INDEX UNIQ_D1AF9A5028469E1 ON `user` (`last_post_id`);',
                     4 => 'CREATE TABLE `post` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,`title` VARCHAR(255) NOT NULL,`content` VARCHAR(255) NOT NULL,`slug` VARCHAR(128) NOT NULL,`created_at` DATETIME NOT NULL,`user_id` INTEGER,FOREIGN KEY (`user_id`) REFERENCES `user` (id) ON DELETE SET NULL ON UPDATE NO ACTION);',
-                    5 => 'CREATE UNIQUE INDEX UNIQ_5A8A6C8D989D9B62 ON `post` (`slug`);',
-                    6 => 'CREATE INDEX IX_5A8A6C8DA76ED395 ON `post` (`user_id`);',
+                    5 => 'CREATE UNIQUE INDEX UNIQ_07FCECC126F6AA3 ON `post` (`slug`);',
+                    6 => 'CREATE INDEX IX_3EF7B93DDDDEB8CFA ON `post` (`user_id`);',
                     7 => '-- DOWN MIGRATION --',
-                    8 => 'DROP INDEX UNIQ_8D93D6495F37A13B;',
-                    9 => 'DROP INDEX UNIQ_8D93D6492D053F64;',
+                    8 => 'DROP INDEX UNIQ_439C366749B149E;',
+                    9 => 'DROP INDEX UNIQ_D1AF9A5028469E1;',
                     10 => 'DROP TABLE `user`;',
-                    11 => 'DROP INDEX UNIQ_5A8A6C8D989D9B62;',
-                    12 => 'DROP INDEX IX_5A8A6C8DA76ED395;',
+                    11 => 'DROP INDEX UNIQ_07FCECC126F6AA3;',
+                    12 => 'DROP INDEX IX_3EF7B93DDDDEB8CFA;',
                     13 => 'DROP TABLE `post`;',
                 ));
                 break;
@@ -87,21 +87,21 @@ class MigrationTest extends TestCase
                 $this->assertEquals($lines, array (
                     0 => '-- UP MIGRATION --',
                     1 => 'CREATE TABLE `user` (`id` INT(11) AUTO_INCREMENT PRIMARY KEY NOT NULL,`firstname` VARCHAR(255) NOT NULL,`lastname` VARCHAR(255) NOT NULL,`email` VARCHAR(255) NOT NULL,`password` VARCHAR(255) NOT NULL,`token` VARCHAR(32) NOT NULL,`is_active` TINYINT(1) NOT NULL,`created_at` DATETIME DEFAULT NULL,`last_post_id` INT(11) DEFAULT NULL);',
-                    2 => 'CREATE UNIQUE INDEX UNIQ_8D93D6495F37A13B ON `user` (`token`);',
-                    3 => 'CREATE UNIQUE INDEX UNIQ_8D93D6492D053F64 ON `user` (`last_post_id`);',
+                    2 => 'CREATE UNIQUE INDEX UNIQ_439C366749B149E ON `user` (`token`);',
+                    3 => 'CREATE UNIQUE INDEX UNIQ_D1AF9A5028469E1 ON `user` (`last_post_id`);',
                     4 => 'CREATE TABLE `post` (`id` INT(11) AUTO_INCREMENT PRIMARY KEY NOT NULL,`title` VARCHAR(255) NOT NULL,`content` VARCHAR(255) NOT NULL,`slug` VARCHAR(128) NOT NULL,`created_at` DATETIME NOT NULL,`user_id` INT(11) DEFAULT NULL);',
-                    5 => 'CREATE UNIQUE INDEX UNIQ_5A8A6C8D989D9B62 ON `post` (`slug`);',
-                    6 => 'CREATE INDEX IX_5A8A6C8DA76ED395 ON `post` (`user_id`);',
+                    5 => 'CREATE UNIQUE INDEX UNIQ_07FCECC126F6AA3 ON `post` (`slug`);',
+                    6 => 'CREATE INDEX IX_3EF7B93DDDDEB8CFA ON `post` (`user_id`);',
                     7 => 'ALTER TABLE `user` ADD CONSTRAINT FK_8D93D6492D053F64 FOREIGN KEY (`last_post_id`) REFERENCES `post`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION;',
                     8 => 'ALTER TABLE `post` ADD CONSTRAINT FK_5A8A6C8DA76ED395 FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION;',
                     9 => '-- DOWN MIGRATION --',
                     10 => 'ALTER TABLE `user` DROP FOREIGN KEY FK_8D93D6492D053F64;',
                     11 => 'ALTER TABLE `post` DROP FOREIGN KEY FK_5A8A6C8DA76ED395;',
-                    12 => 'DROP INDEX UNIQ_8D93D6495F37A13B ON `user`;',
-                    13 => 'DROP INDEX UNIQ_8D93D6492D053F64 ON `user`;',
+                    12 => 'DROP INDEX UNIQ_439C366749B149E ON `user`;',
+                    13 => 'DROP INDEX UNIQ_D1AF9A5028469E1 ON `user`;',
                     14 => 'DROP TABLE `user`;',
-                    15 => 'DROP INDEX UNIQ_5A8A6C8D989D9B62 ON `post`;',
-                    16 => 'DROP INDEX IX_5A8A6C8DA76ED395 ON `post`;',
+                    15 => 'DROP INDEX UNIQ_07FCECC126F6AA3 ON `post`;',
+                    16 => 'DROP INDEX IX_3EF7B93DDDDEB8CFA ON `post`;',
                     17 => 'DROP TABLE `post`;',
                 ));
                 break;
@@ -149,11 +149,11 @@ class MigrationTest extends TestCase
                     $this->assertEquals($lines, array (
                         0 => '-- UP MIGRATION --',
                         1 => 'ALTER TABLE `user` ADD `childs` INTEGER NOT NULL DEFAULT 0;',
-                        2 => 'CREATE UNIQUE INDEX UNIQ_8D93D649E7927C74 ON `user` (`email`);',
+                        2 => 'CREATE UNIQUE INDEX UNIQ_27C6B8E780CFC29 ON `user` (`email`);',
                         3 => '-- Modify column email is not supported with Michel\\PaperORM\\Schema\\SqliteSchema. Consider creating a new column and migrating the data.;',
                         4 => '-- DOWN MIGRATION --',
                         5 => '-- Drop column childs is not supported with Michel\\PaperORM\\Schema\\SqliteSchema. You might need to manually drop the column.;',
-                        6 => 'DROP INDEX UNIQ_8D93D649E7927C74;',
+                        6 => 'DROP INDEX UNIQ_27C6B8E780CFC29;',
                     ));
                 }
                 break;
@@ -162,11 +162,11 @@ class MigrationTest extends TestCase
                 $this->assertEquals($lines, array (
                     0 => '-- UP MIGRATION --',
                     1 => 'ALTER TABLE `user` ADD COLUMN `childs` INT(11) NOT NULL DEFAULT 0;',
-                    2 => 'CREATE UNIQUE INDEX UNIQ_8D93D649E7927C74 ON `user` (`email`);',
+                    2 => 'CREATE UNIQUE INDEX UNIQ_27C6B8E780CFC29 ON `user` (`email`);',
                     3 => 'ALTER TABLE `user` MODIFY COLUMN `email` VARCHAR(255) DEFAULT NULL;',
                     4 => '-- DOWN MIGRATION --',
                     5 => 'ALTER TABLE `user` DROP COLUMN `childs`;',
-                    6 => 'DROP INDEX UNIQ_8D93D649E7927C74 ON `user`;',
+                    6 => 'DROP INDEX UNIQ_27C6B8E780CFC29 ON `user`;',
                     7 => 'ALTER TABLE `user` MODIFY COLUMN `email` VARCHAR(255) NOT NULL;',
                 ));
                 break;

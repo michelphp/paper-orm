@@ -46,6 +46,10 @@ final class IndexMapper
             if (!empty($indexes)) {
                 return $indexes;
             }
+
+            if (!method_exists($class, 'getIndexes')) {
+                return [];
+            }
         }
 
         if (method_exists($class, 'getIndexes')) {

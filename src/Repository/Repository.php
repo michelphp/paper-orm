@@ -102,4 +102,10 @@ abstract class Repository
         $queryBuilder = new QueryBuilder($this->em);
         return $queryBuilder->select($this->getEntityName(), $propertiesToSelect);
     }
+
+    public function clear(): void
+    {
+        $this->ep->clear();
+        $this->em->getCache()->clear();
+    }
 }

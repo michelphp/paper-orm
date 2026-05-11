@@ -221,7 +221,7 @@ class SqlitePlatform extends AbstractPlatform
 
     public function getMaxLength(): int
     {
-        return 30;
+        return 20;
     }
 
     public function getPrefixIndexName(): string

@@ -166,6 +166,11 @@ class EntityPersistence
         return $rows;
     }
 
+    public function clear(): void
+    {
+        $this->managed->removeAll($this->managed);
+    }
+
     private function execute(string $query, array $params = []): int
     {
         $conn = $this->platform->getConnection();

@@ -155,7 +155,10 @@ class EntityManager implements EntityManagerInterface
 
     public function clear(): void
     {
-        $this->getCache()->clear();
+        foreach ($this->repositories as $repository) {
+            $repository->clear();
+        }
+        $this->unitOfWork->clear();
     }
 
 }
