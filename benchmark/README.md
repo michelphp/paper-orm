@@ -26,7 +26,7 @@ php bench.php --scenario=join,paginate --orm=paper
 
 | Scenario         | What is measured                                             |
 |------------------|--------------------------------------------------------------|
-| `bootstrap`      | Build the entity manager, then fetch one entity (cold start) |
+| `bootstrap`      | Build the entity manager, then fetch one entity (classes already loaded) |
 | `insert`         | `persist()` N new users, then a single `flush()`             |
 | `find_pk`        | Fetch N users one by one by primary key                      |
 | `find_all`       | Fetch N users as objects                                     |
@@ -39,13 +39,17 @@ php bench.php --scenario=join,paginate --orm=paper
 
 Fairness rules:
 
-- Every measurement runs in a **fresh PHP process** with its own **in-memory SQLite** database.
+- Everything runs in **one PHP process**: no process spawning cost, same conditions for both ORMs.
+- The ORM order **alternates on every iteration** (A B, B A, ...), so neither the execution order nor a drift of the machine favours one of them.
+- Every measurement gets its own entity manager and its own **in-memory SQLite** database.
 - Same raw DDL and same seeded data for both ORMs (`src/Schema.php`), no schema tool involved.
-- Metadata is loaded once before the measurement (except `bootstrap`, which measures exactly that).
+- Metadata is cached for the whole process for both ORMs (PaperORM static caches, one shared Doctrine cache), like a persistent cache in production.
 - Loading entities is excluded from `update` / `delete`, only the write is measured.
-- Doctrine uses in-process array caches only, like PaperORM: nothing survives between runs.
 - Each result is **verified** (row counts, sum of ids for pagination). A wrong result is flagged with `(!)`.
-- 1 discarded warm-up run, then the median of `--iterations` runs.
+- 1 discarded warm-up iteration (class loading, metadata), then the median and the minimum of `--iterations` runs.
+- Peak memory needs PHP >= 8.2 (`memory_reset_peak_usage()`).
+
+`profile.php` breaks the PaperORM read path down layer by layer (raw SQL, JoinQL / GraphBuilder, hydration modes).
 
 Disable Xdebug when benchmarking. Results are saved in `results/bench-latest.json`.
 

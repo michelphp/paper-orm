@@ -18,6 +18,12 @@ final class DoctrineAdapter implements OrmAdapter
 {
     private ?EntityManager $em = null;
 
+    /**
+     * Shared by every entity manager of the process, like PaperORM's static metadata caches
+     * (and like a persistent cache in production).
+     */
+    private static ?ArrayAdapter $cache = null;
+
     public function label(): string
     {
         return 'Doctrine';
@@ -33,10 +39,9 @@ final class DoctrineAdapter implements OrmAdapter
         $config = new Configuration();
         $config->setMetadataDriverImpl(new AttributeDriver([dirname(__DIR__) . '/Entity/Doctrine']));
 
-        // In-process caches only, like PaperORM: nothing survives between two runs.
-        $cache = new ArrayAdapter();
-        $config->setMetadataCache($cache);
-        $config->setQueryCache($cache);
+        self::$cache = self::$cache ?? new ArrayAdapter();
+        $config->setMetadataCache(self::$cache);
+        $config->setQueryCache(self::$cache);
 
         if (PHP_VERSION_ID >= 80400 && method_exists($config, 'enableNativeLazyObjects')) {
             $config->enableNativeLazyObjects(true);

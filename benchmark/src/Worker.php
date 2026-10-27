@@ -8,13 +8,13 @@ use Bench\Adapter\Adapters;
 use Bench\Adapter\OrmAdapter;
 
 /**
- * Runs one scenario for one ORM. Each call happens in a fresh PHP process (see run.php),
- * so time and peak memory are never polluted by a previous scenario.
+ * Runs one scenario for one ORM, inside the benchmark process. Every call gets its own entity manager
+ * and its own in-memory database, both released when the call returns.
  */
 final class Worker
 {
     public const SCENARIOS = [
-        'bootstrap' => 'Build the entity manager, then fetch one entity (cold start)',
+        'bootstrap' => 'Build the entity manager, then fetch one entity (classes already loaded)',
         'insert' => 'persist() N new users, then a single flush()',
         'find_pk' => 'Fetch N users one by one by primary key',
         'find_all' => 'Fetch N users as objects',

@@ -34,6 +34,17 @@ final class Adapters
             $version .= '@' . substr($reference, 0, 7);
         }
 
+        // A path repository is symlinked: the reference recorded at install time is stale, ask git.
+        $path = InstalledVersions::getInstallPath($package);
+        if ($path !== null && is_dir($path . '/.git')) {
+            $branch = trim((string) shell_exec(sprintf('git -C %s rev-parse --abbrev-ref HEAD 2>/dev/null', escapeshellarg($path))));
+            $commit = trim((string) shell_exec(sprintf('git -C %s rev-parse --short HEAD 2>/dev/null', escapeshellarg($path))));
+            $dirty = trim((string) shell_exec(sprintf('git -C %s status --porcelain --untracked-files=no 2>/dev/null', escapeshellarg($path))));
+            if ($branch !== '' && $commit !== '') {
+                $version = sprintf('%s@%s%s (local)', $branch, $commit, $dirty !== '' ? '+changes' : '');
+            }
+        }
+
         return $version;
     }
 }

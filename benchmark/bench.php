@@ -7,11 +7,15 @@ declare(strict_types=1);
  *
  *   php bench.php [--n=1000] [--posts=5] [--iterations=5] [--scenario=find_all,join] [--orm=paper,doctrine] [--no-save]
  *
- * Every measurement runs in a fresh PHP process with its own in-memory SQLite database.
- * The first run of each (scenario, ORM) pair is a discarded warm-up, the median of the others is reported.
+ * Everything runs in this single PHP process. Every measurement gets its own entity manager and its own
+ * in-memory SQLite database. The ORM order alternates on every iteration (A B, B A, ...) so neither the
+ * execution order nor a drift of the machine favours one of them.
+ * The first iteration is a discarded warm-up (class loading, metadata), the median and minimum of the others are reported.
  */
 
 require __DIR__ . '/vendor/autoload.php';
+
+ini_set('memory_limit', '-1');
 
 use Bench\Adapter\Adapters;
 use Bench\Worker;
@@ -58,24 +62,36 @@ printf("PHP %s (%s) | OPcache CLI: %s | Xdebug: %s\n", PHP_VERSION, PHP_OS_FAMIL
 foreach ($environment['versions'] as $label => $version) {
     printf("%-9s %s\n", $label, $version);
 }
-printf("N = %d users, %d posts per user (join), %d iterations + 1 warm-up, median reported\n\n", $n, $posts, $iterations);
+printf("N = %d users, %d posts per user (join), %d iterations + 1 warm-up, single process, alternating order\n", $n, $posts, $iterations);
+if (!function_exists('memory_reset_peak_usage')) {
+    echo "PHP < 8.2: peak memory cannot be reset between measurements, memory figures are not meaningful\n";
+}
+echo "\n";
 
 $results = [];
 foreach ($scenarios as $scenario) {
     printf("> %-15s %s\n", $scenario, Worker::SCENARIOS[$scenario]);
-    foreach ($orms as $orm) {
-        $runs = [];
-        $error = null;
-        for ($i = 0; $i <= $iterations; $i++) {
-            [$run, $error] = runWorker($orm, $scenario, $n, $posts);
-            if ($error !== null) {
-                break;
+    $runs = array_fill_keys($orms, []);
+    $errors = array_fill_keys($orms, null);
+    for ($i = 0; $i <= $iterations; $i++) {
+        $order = $i % 2 === 0 ? $orms : array_reverse($orms);
+        foreach ($order as $orm) {
+            if ($errors[$orm] !== null) {
+                continue;
+            }
+            try {
+                $run = Worker::run($orm, $scenario, $n, $posts);
+            } catch (\Throwable $e) {
+                $errors[$orm] = sprintf('%s: %s in %s:%d', get_class($e), $e->getMessage(), $e->getFile(), $e->getLine());
+                continue;
             }
             if ($i > 0) {
-                $runs[] = $run;
+                $runs[$orm][] = $run;
             }
         }
-        $results[$scenario][$orm] = summarize($runs, $error);
+    }
+    foreach ($orms as $orm) {
+        $results[$scenario][$orm] = summarize($runs[$orm], $errors[$orm]);
     }
 }
 
@@ -92,38 +108,6 @@ if (!isset($options['no-save'])) {
     file_put_contents($file, $json);
     file_put_contents($dir . '/bench-latest.json', $json);
     printf("\nResults saved to %s\n", $file);
-}
-
-/**
- * @return array{0: ?array, 1: ?string}
- */
-function runWorker(string $orm, string $scenario, int $n, int $posts): array
-{
-    $command = [
-        PHP_BINARY,
-        '-d', 'memory_limit=-1',
-        __DIR__ . '/run.php',
-        '--orm=' . $orm,
-        '--scenario=' . $scenario,
-        '--n=' . $n,
-        '--posts=' . $posts,
-    ];
-    $process = proc_open($command, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
-    if (!is_resource($process)) {
-        return [null, 'Unable to start the worker process'];
-    }
-    $stdout = stream_get_contents($pipes[1]);
-    $stderr = stream_get_contents($pipes[2]);
-    fclose($pipes[1]);
-    fclose($pipes[2]);
-    $exitCode = proc_close($process);
-
-    $data = json_decode((string) $stdout, true);
-    if ($exitCode !== 0 || !is_array($data)) {
-        return [null, trim($stderr . ' ' . $stdout) ?: 'Worker exited with code ' . $exitCode];
-    }
-
-    return [$data, null];
 }
 
 function summarize(array $runs, ?string $error): array
@@ -168,7 +152,7 @@ function printReport(array $results, array $scenarios, array $orms): void
 
     $header = sprintf('%-15s', 'Scenario');
     foreach ($orms as $orm) {
-        $header .= sprintf(' | %-24s', $labels[$orm] . ' (time / memory)');
+        $header .= sprintf(' | %-32s', $labels[$orm] . ' (median (min) / memory)');
     }
     if (count($orms) === 2) {
         $header .= ' | Time ratio';
@@ -181,16 +165,16 @@ function printReport(array $results, array $scenarios, array $orms): void
         foreach ($orms as $orm) {
             $result = $results[$scenario][$orm];
             if (isset($result['error'])) {
-                $line .= sprintf(' | %-24s', 'ERROR');
+                $line .= sprintf(' | %-32s', 'ERROR');
                 $problems[] = sprintf('%s / %s: %s', $scenario, $labels[$orm], $result['error']);
                 continue;
             }
-            $cell = sprintf('%s / %s', formatTime($result['time_ms']), formatBytes($result['memory']));
+            $cell = sprintf('%s (%s) / %s', formatTime($result['time_ms']), formatTime($result['time_min_ms']), formatBytes($result['memory']));
             if (!$result['ok']) {
                 $cell .= ' (!)';
                 $problems[] = sprintf('%s / %s: wrong result, got %s, expected %s', $scenario, $labels[$orm], json_encode($result['check']), json_encode($result['expected']));
             }
-            $line .= sprintf(' | %-24s', $cell);
+            $line .= sprintf(' | %-32s', $cell);
         }
         if (count($orms) === 2) {
             $line .= ' | ' . formatRatio($results[$scenario], $orms, $labels);
