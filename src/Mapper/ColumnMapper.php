@@ -38,7 +38,8 @@ final class ColumnMapper
                 throw new LogicException(self::class . ' Only one primary key is allowed. : ' . $class);
             }
 
-            $primaryKey = $columnsFiltered[0];
+            // array_filter() keeps the keys: the primary key is not always at 0 (e.g. an id inherited from a parent).
+            $primaryKey = reset($columnsFiltered);
             $cache->set($class, $primaryKey);
         }
         return $cache->get($class);
