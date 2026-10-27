@@ -144,7 +144,15 @@ class MigrationTest extends TestCase
                 $schema = $driver->createDatabaseSchema();
                 $lines = file($migrationFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
                 if ($schema->supportsDropColumn()) {
-                    $this->assertEquals($lines, array());
+                    $this->assertEquals($lines, array (
+                        0 => '-- UP MIGRATION --',
+                        1 => 'ALTER TABLE `user` ADD `childs` INTEGER NOT NULL DEFAULT 0;',
+                        2 => 'CREATE UNIQUE INDEX UNIQ_27C6B8E780CFC29 ON `user` (`email`);',
+                        3 => '-- Modify column email is not supported with Michel\\PaperORM\\Schema\\SqliteSchema. Consider creating a new column and migrating the data.;',
+                        4 => '-- DOWN MIGRATION --',
+                        5 => 'ALTER TABLE `user` DROP COLUMN `childs`;',
+                        6 => 'DROP INDEX UNIQ_27C6B8E780CFC29;',
+                    ));
                 } else {
                     $this->assertEquals($lines, array (
                         0 => '-- UP MIGRATION --',

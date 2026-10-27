@@ -259,7 +259,7 @@ class SqliteSchema implements SchemaInterface
 
     public function supportsDropColumn(): bool
     {
-        return SQLite3::version()['versionString'] >= '3.35.0';
+        return version_compare(SQLite3::version()['versionString'], '3.35.0', '>=');
     }
 
     public function supportsModifyColumn(): bool
