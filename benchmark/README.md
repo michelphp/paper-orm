@@ -9,6 +9,37 @@ Standalone project, **not part of the `michel/paper-orm` package**:
 
 Requires PHP >= 8.1 with `pdo_sqlite`.
 
+## Docker (PHP 8.2, Debian)
+
+`Dockerfile` + `docker-compose.yml` give a reproducible PHP 8.2 CLI (Debian bookworm) with Composer and the
+SPX profiler. The repositories are mounted under `/src` with the same layout as on the host
+(`/src/paper-orm`, `/src/php-sql-mapper`) and `/app` is the benchmark directory.
+
+```bash
+cd benchmark
+docker compose build
+docker compose run --rm bench composer install
+docker compose run --rm bench php bench.php --iterations=10
+docker compose run --rm bench php profile.php
+```
+
+Profile `find()` function by function with SPX (loaded only for this command):
+
+```bash
+docker compose run --rm -e SPX_ENABLED=1 -e SPX_REPORT=flat -e SPX_FP_LIMIT=30 bench \
+    php -d extension=spx.so profile-find.php
+```
+
+The `php-sql-mapper` mount expects that directory next to `paper-orm`; remove it from `docker-compose.yml`
+if you do not use a local php-sql-mapper.
+
+The compose file also starts a MariaDB (data in memory, gone when stopped) for the paper-orm test suite:
+
+```bash
+docker compose run --rm bench sh -c "cd /src/paper-orm && php vendor/bin/unitester tests/"
+docker compose down
+```
+
 ## Install
 
 ```bash

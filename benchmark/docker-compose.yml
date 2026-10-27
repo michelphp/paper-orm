@@ -1,0 +1,42 @@
+services:
+  bench:
+    build: .
+    image: paper-orm-benchmark:php8.2
+    # Files written in the mounted repositories (vendor/, var/, results/) keep your ownership.
+    user: "${UID:-1000}:${GID:-1000}"
+    working_dir: /app
+    environment:
+      # Read by the paper-orm test suite (tests/Helper/DataBaseHelperTest.php).
+      MARIADB_HOST: mariadb
+      MARIADB_PORT: 3306
+      MARIADB_DB: paper_orm_test
+      MARIADB_USER: root
+      MARIADB_PASSWORD: root
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ..
+        target: /src/paper-orm
+      # Only needed when benchmark/composer.json points to a local php-sql-mapper (see README).
+      # Remove this mount if the php-sql-mapper directory does not exist next to paper-orm.
+      - type: bind
+        source: ../../php-sql-mapper
+        target: /src/php-sql-mapper
+        bind:
+          create_host_path: false
+    command: php bench.php
+
+  # Only used by the paper-orm test suite, the benchmark itself runs on in-memory SQLite.
+  mariadb:
+    image: mariadb:11.4
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    tmpfs:
+      - /var/lib/mysql
