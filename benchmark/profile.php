@@ -7,7 +7,9 @@ declare(strict_types=1);
  *
  *   php profile.php [--n=1000] [--posts=5] [--iterations=10]
  *
- * Each step adds one layer on top of the previous one, the "layer cost" column is the difference.
+ * Every step is measured from the same state: the entity manager is cleared and the garbage collector run
+ * before each measurement, so what was loaded by a previous step cannot slow down the next one.
+ * "Cost" is the difference with the step named in the "over" column.
  * Runs PaperORM only, on in-memory SQLite, median of --iterations runs after one warm-up.
  */
 
@@ -17,6 +19,7 @@ use Bench\Entity\Paper\Post;
 use Bench\Entity\Paper\User;
 use Bench\Schema;
 use Michel\PaperORM\EntityManager;
+use Michel\PaperORM\Expression\Expr;
 use Michel\PaperORM\PaperConfiguration;
 use Michel\PaperORM\Query\QueryBuilder;
 
@@ -35,6 +38,8 @@ $pdo = $em->getConnection()->getPdo();
 Schema::create($pdo);
 Schema::seed($pdo, $n, $posts);
 
+printf("PaperORM read path profile — PHP %s, median of %d runs\n\n", PHP_VERSION, $iterations);
+
 $cases = [
     sprintf('users (%d rows)', $n) => static function () use ($em): QueryBuilder {
         return $em->getRepository(User::class)->qb();
@@ -44,44 +49,96 @@ $cases = [
     },
 ];
 
-printf("PaperORM read path profile — PHP %s, median of %d runs\n\n", PHP_VERSION, $iterations);
-
 foreach ($cases as $label => $queryBuilder) {
     $sql = $queryBuilder()->buildSqlQuery()->getQuery();
-    $steps = [
-        'PDO fetchAll (raw SQL)' => static function () use ($pdo, $sql) {
+    profile($label, $em, $iterations, [
+        ['raw SQL (PDO fetchAll)', null, static function () use ($pdo, $sql) {
             return $pdo->query($sql)->fetchAll(\PDO::FETCH_ASSOC);
-        },
-        '+ JoinQL / GraphBuilder' => static function () use ($queryBuilder) {
+        }],
+        ['JoinQL / GraphBuilder', 'raw SQL (PDO fetchAll)', static function () use ($queryBuilder) {
             return $queryBuilder()->buildSqlQuery()->getResult();
-        },
-        '+ array hydration' => static function () use ($queryBuilder) {
+        }],
+        ['arrays', 'JoinQL / GraphBuilder', static function () use ($queryBuilder) {
             return $queryBuilder()->getResult(QueryBuilder::HYDRATE_ARRAY);
-        },
-        '+ read-only objects' => static function () use ($queryBuilder) {
+        }],
+        ['read-only objects', 'JoinQL / GraphBuilder', static function () use ($queryBuilder) {
             return $queryBuilder()->getResult(QueryBuilder::HYDRATE_OBJECT_READONLY);
-        },
-        '+ managed objects (proxy)' => static function () use ($queryBuilder, $em) {
-            $em->clear();
+        }],
+        ['managed objects (proxy)', 'JoinQL / GraphBuilder', static function () use ($queryBuilder) {
             return $queryBuilder()->getResult(QueryBuilder::HYDRATE_OBJECT);
-        },
-    ];
+        }],
+    ]);
+}
 
-    printf("%s\n%-28s %12s %12s\n", $label, 'Step', 'Total', 'Layer cost');
-    echo str_repeat('-', 54) . "\n";
-    $previous = 0.0;
-    foreach ($steps as $step => $callback) {
-        $callback();
-        $times = [];
-        for ($i = 0; $i < $iterations; $i++) {
+// find($id): the fixed cost of one query matters more than hydration.
+$ids = range(1, $n);
+$byId = static function (int $id) use ($em): QueryBuilder {
+    $qb = $em->getRepository(User::class)->qb();
+    $qb->where(Expr::equal('id', $id)->toPrepared($qb->getPrimaryAlias()));
+    return $qb->setParams(['id' => $id]);
+};
+$sql = $byId(1)->buildSqlQuery()->getQuery();
+profile(sprintf('find($id) x %d', $n), $em, $iterations, [
+    ['raw SQL (PDO prepare+execute)', null, static function () use ($pdo, $sql, $ids) {
+        foreach ($ids as $id) {
+            $statement = $pdo->prepare($sql);
+            $statement->bindValue(':id', $id);
+            $statement->execute();
+            $statement->fetch(\PDO::FETCH_ASSOC);
+        }
+    }],
+    ['build SQL (QueryBuilder, JoinQL)', null, static function () use ($byId, $ids) {
+        foreach ($ids as $id) {
+            $byId($id)->buildSqlQuery()->getQuery();
+        }
+    }],
+    ['execute (JoinQL, graph)', 'build SQL (QueryBuilder, JoinQL)', static function () use ($byId, $ids) {
+        foreach ($ids as $id) {
+            $byId($id)->buildSqlQuery()->getOneOrNullResult();
+        }
+    }],
+    ['managed object', 'execute (JoinQL, graph)', static function () use ($byId, $ids) {
+        foreach ($ids as $id) {
+            $byId($id)->getOneOrNullResult(QueryBuilder::HYDRATE_OBJECT);
+        }
+    }],
+    ['Repository::find()->toObject()', 'managed object', static function () use ($em, $ids) {
+        foreach ($ids as $id) {
+            $em->getRepository(User::class)->find($id)->toObject();
+        }
+    }],
+]);
+
+/**
+ * @param array<int, array{0: string, 1: ?string, 2: callable}> $steps label, label of the step it is compared to, callback
+ */
+function profile(string $title, EntityManager $em, int $iterations, array $steps): void
+{
+    printf("%s\n%-32s %11s %11s   %s\n", $title, 'Step', 'Total', 'Cost', 'over');
+    echo str_repeat('-', 90) . "\n";
+    // Interleaved like bench.php: every iteration runs every step, in a rotating order, so a change of speed
+    // of the machine during the run affects all steps alike instead of a whole step.
+    $times = [];
+    $count = count($steps);
+    for ($i = 0; $i <= $iterations; $i++) {
+        for ($k = 0; $k < $count; $k++) {
+            [$label, , $callback] = $steps[($i + $k) % $count];
+            $em->clear();
+            gc_collect_cycles();
             $start = hrtime(true);
             $callback();
-            $times[] = (hrtime(true) - $start) / 1e6;
+            if ($i > 0) {
+                $times[$label][] = (hrtime(true) - $start) / 1e6;
+            }
         }
-        sort($times);
-        $median = $times[intdiv(count($times), 2)];
-        printf("%-28s %9.2f ms %9.2f ms\n", $step, $median, $median - $previous);
-        $previous = $median;
+    }
+
+    $medians = [];
+    foreach ($steps as [$label, $over]) {
+        sort($times[$label]);
+        $medians[$label] = $times[$label][intdiv(count($times[$label]), 2)];
+        $cost = $over === null ? $medians[$label] : $medians[$label] - $medians[$over];
+        printf("%-32s %8.2f ms %8.2f ms   %s\n", $label, $medians[$label], $cost, $over ?? '-');
     }
     echo "\n";
 }
