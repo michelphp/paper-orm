@@ -216,6 +216,16 @@ class MariaDBPlatform extends AbstractPlatform
         return 20;
     }
 
+    public function applyLimit(string $sql, ?int $limit, ?int $offset): string
+    {
+        if ($limit === null && $offset === null) {
+            return $sql;
+        }
+
+        // MariaDB requires a LIMIT before OFFSET, the documented way to say "no limit" is the max unsigned bigint.
+        return sprintf('%s LIMIT %s OFFSET %d', $sql, $limit === null ? '18446744073709551615' : (string)$limit, $offset ?? 0);
+    }
+
     public function getPrefixIndexName(): string
     {
         return 'ix_';

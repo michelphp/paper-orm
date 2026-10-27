@@ -224,6 +224,16 @@ class SqlitePlatform extends AbstractPlatform
         return 20;
     }
 
+    public function applyLimit(string $sql, ?int $limit, ?int $offset): string
+    {
+        if ($limit === null && $offset === null) {
+            return $sql;
+        }
+
+        // SQLite requires a LIMIT before OFFSET, -1 means no limit.
+        return sprintf('%s LIMIT %d OFFSET %d', $sql, $limit ?? -1, $offset ?? 0);
+    }
+
     public function getPrefixIndexName(): string
     {
         return 'ix_';

@@ -89,6 +89,11 @@ interface PlatformInterface
     public function getColumnTypeMappings(): array;
     public function convertForeignKeyRuleStringToCode(?string $rule): int;
     public function getMaxLength(): int;
+
+    /**
+     * Appends the platform-specific pagination clause to a SELECT statement.
+     */
+    public function applyLimit(string $sql, ?int $limit, ?int $offset): string;
     public function getPrefixIndexName(): string;
     public function getPrefixUniqIndexName(): string;
     public function getPrefixForeignKeyName(): string;
