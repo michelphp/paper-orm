@@ -36,4 +36,12 @@ final class OneToManyCache
         }
         return [];
     }
+
+    /**
+     * True once the relations of the class are known, even when it has none.
+     */
+    public function has(string $key): bool
+    {
+        return array_key_exists($key, $this->data);
+    }
 }

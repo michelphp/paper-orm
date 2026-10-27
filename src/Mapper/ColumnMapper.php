@@ -76,7 +76,7 @@ final class ColumnMapper
         }
 
         $cache = OneToManyCache::getInstance();
-        if (empty($cache->get($class))) {
+        if (!$cache->has($class)) {
             $columnsMapping = [];
             if (is_subclass_of($class, EntityInterface::class)) {
                 $columnsMapping = self::getColumnsMapping($class);

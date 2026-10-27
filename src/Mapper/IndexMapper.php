@@ -22,9 +22,8 @@ final class IndexMapper
     {
         $cache = IndexCache::getInstance();
         $key = is_object($class) ? get_class($class) : $class;
-        $indexes = $cache->get($key);
-        if (!empty($indexes)) {
-            return $indexes;
+        if ($cache->has($key)) {
+            return $cache->get($key);
         }
         $indexes = self::getIndexesMapping($class);
         $cache->set($key, $indexes);
