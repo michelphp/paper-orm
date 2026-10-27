@@ -3,6 +3,7 @@
 namespace Michel\PaperORM\Proxy;
 
 use DateTimeInterface;
+use Michel\PaperORM\Cache\PropertyReflectionCache;
 use Michel\PaperORM\Entity\EntityInterface;
 use Michel\PaperORM\Mapping\Column\Column;
 use Michel\PaperORM\Mapping\Column\DateColumn;
@@ -82,14 +83,10 @@ trait ProxyInitializedTrait
 
     private function getValues(): array
     {
-        $reflectionProxy = new \ReflectionClass($this);
-        $reflection = $reflectionProxy->getParentClass();
         $cleanedData = [];
 
         foreach ($this->__propertiesInitialized as $key => $column) {
-            $property = $reflection->getProperty($key);
-            $property->setAccessible(true);
-            $value = $property->getValue($this);
+            $value = PropertyReflectionCache::get($this, $key)->getValue($this);
             if ($column->getType() == DateTimeType::class && $value instanceof DateTimeInterface) {
                 $cleanedData[$key] = $value->getTimestamp();
             } elseif ($column instanceof DateColumn && $value instanceof DateTimeInterface) {

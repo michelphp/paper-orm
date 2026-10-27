@@ -4,12 +4,12 @@ namespace Michel\PaperORM\Serializer;
 
 
 use InvalidArgumentException;
+use LogicException;
+use Michel\PaperORM\Cache\PropertyReflectionCache;
 use Michel\PaperORM\Entity\EntityInterface;
 use Michel\PaperORM\Mapper\ColumnMapper;
 use Michel\PaperORM\Mapping\Column\JoinColumn;
 use Michel\PaperORM\Schema\SchemaInterface;
-use ReflectionClass;
-use ReflectionException;
 
 final class SerializerToDb
 {
@@ -30,7 +30,6 @@ final class SerializerToDb
     {
         $entity = $this->entity;
         $columns = ColumnMapper::getColumns(get_class($entity));
-        $reflection = new ReflectionClass($entity);
         $dbData = [];
         foreach ($columns as $column) {
             if (!empty($columnsToSerialize) && !in_array($column->getProperty(), $columnsToSerialize)) {
@@ -38,16 +37,11 @@ final class SerializerToDb
             }
 
             try {
-                if (false !== ($reflectionParent = $reflection->getParentClass()) && $reflectionParent->hasProperty($column->getProperty())) {
-                    $property = $reflectionParent->getProperty($column->getProperty());
-                } else {
-                    $property = $reflection->getProperty($column->getProperty());
-                }
-            } catch (ReflectionException $e) {
+                $property = PropertyReflectionCache::get($entity, $column->getProperty());
+            } catch (LogicException $e) {
                 throw new InvalidArgumentException("Property {$column->getProperty()} not found in class " . get_class($entity));
             }
 
-            $property->setAccessible(true);
             $key = $column->getName();
             $value = $property->getValue($entity);
             if ($column instanceof JoinColumn) {

@@ -2,6 +2,7 @@
 
 namespace Michel\PaperORM\Hydrator;
 
+use Michel\PaperORM\Cache\PropertyReflectionCache;
 use Michel\PaperORM\Collection\ObjectStorage;
 use Michel\PaperORM\Entity\EntityInterface;
 use Michel\PaperORM\Mapper\ColumnMapper;
@@ -38,11 +39,6 @@ abstract class AbstractEntityHydrator
 
     private function mapProperties(object $object, array $data): void
     {
-        $reflection = new \ReflectionClass($object);
-        if ($reflection->getParentClass()) {
-            $reflection = $reflection->getParentClass();
-        }
-
         $columns = array_merge(
             ColumnMapper::getColumns($object),
             ColumnMapper::getOneToManyRelations($object)
@@ -64,8 +60,7 @@ abstract class AbstractEntityHydrator
                 $properties[$column->getProperty()] = $column;
             }
 
-            $property = $reflection->getProperty($column->getProperty());
-            $property->setAccessible(true);
+            $property = PropertyReflectionCache::get($object, $column->getProperty());
 
             if ($column instanceof JoinColumn) {
                 $entityName = $column->getTargetEntity();
