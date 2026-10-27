@@ -10,7 +10,38 @@ use Michel\PaperORM\Proxy\ProxyInterface;
 
 final class EntityMapper
 {
+    /**
+     * Table and repository names never change at runtime, they are resolved once per class
+     * (the attribute lookup creates a ReflectionClass and an attribute instance).
+     *
+     * @var array<string, string>
+     */
+    private static array $tables = [];
+
+    /**
+     * @var array<string, string|null>
+     */
+    private static array $repositories = [];
+
     static public function getTable($class): string
+    {
+        $key = is_object($class) ? get_class($class) : $class;
+        if (!isset(self::$tables[$key])) {
+            self::$tables[$key] = self::resolveTable($class);
+        }
+        return self::$tables[$key];
+    }
+
+    static public function getRepositoryName($class): ?string
+    {
+        $key = is_object($class) ? get_class($class) : $class;
+        if (!array_key_exists($key, self::$repositories)) {
+            self::$repositories[$key] = self::resolveRepositoryName($class);
+        }
+        return self::$repositories[$key];
+    }
+
+    static private function resolveTable($class): string
     {
         if (!is_subclass_of($class, EntityInterface::class)) {
             throw new \LogicException(sprintf('%s must implement %s', $class, EntityInterface::class));
@@ -37,7 +68,7 @@ final class EntityMapper
         ));
     }
 
-    static public function getRepositoryName($class): ?string
+    static private function resolveRepositoryName($class): ?string
     {
         if (!is_subclass_of($class, EntityInterface::class)) {
             throw new \LogicException(sprintf('%s must implement %s', $class, EntityInterface::class));
