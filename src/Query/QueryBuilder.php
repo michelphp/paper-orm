@@ -49,8 +49,9 @@ final class QueryBuilder
 
     public function getResultIterator(string $hydrationMode = self::HYDRATE_OBJECT): iterable
     {
+        $hydrator = $this->createHydrator($hydrationMode);
         foreach ($this->buildSqlQuery()->getResultIterator() as $item) {
-            yield $this->hydrate([$item], $hydrationMode)[0];
+            yield $hydrator->hydrate($this->select['entityName'], $item);
         }
     }
 
@@ -489,15 +490,23 @@ final class QueryBuilder
         return $entityName;
     }
 
-    private function hydrate(array $data, string $hydrationMode): array
+    /**
+     * @return EntityHydrator|ReadOnlyEntityHydrator|ArrayHydrator
+     */
+    private function createHydrator(string $hydrationMode)
     {
         if ($hydrationMode === self::HYDRATE_OBJECT) {
-            $hydrator = new EntityHydrator($this->schema, $this->cache);
-        } elseif ($hydrationMode === self::HYDRATE_OBJECT_READONLY) {
-            $hydrator = new ReadOnlyEntityHydrator($this->schema);
-        } else {
-            $hydrator = new ArrayHydrator($this->schema);
+            return new EntityHydrator($this->schema, $this->cache);
         }
+        if ($hydrationMode === self::HYDRATE_OBJECT_READONLY) {
+            return new ReadOnlyEntityHydrator($this->schema);
+        }
+        return new ArrayHydrator($this->schema);
+    }
+
+    private function hydrate(array $data, string $hydrationMode): array
+    {
+        $hydrator = $this->createHydrator($hydrationMode);
         $collection = [];
         foreach ($data as $item) {
             $collection[] = $hydrator->hydrate($this->select['entityName'], $item);

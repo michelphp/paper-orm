@@ -30,9 +30,11 @@ final class EntityHydrator extends AbstractEntityHydrator
     {
         $primaryKey = ColumnMapper::getPrimaryKeyColumnName($class);
 
-        $object = $this->cache->get($class, $data[$primaryKey]) ?: ProxyFactory::create($class);
-
-        $this->cache->set($class, $data[$primaryKey], $object);
+        $object = $this->cache->get($class, $data[$primaryKey]);
+        if ($object === null) {
+            $object = ProxyFactory::create($class);
+            $this->cache->set($class, $data[$primaryKey], $object);
+        }
 
         return $object;
     }

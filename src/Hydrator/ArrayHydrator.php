@@ -3,18 +3,19 @@
 namespace Michel\PaperORM\Hydrator;
 
 use LogicException;
-use Michel\PaperORM\Cache\EntityMemcachedCache;
-use Michel\PaperORM\Collection\ObjectStorage;
 use Michel\PaperORM\Entity\EntityInterface;
-use Michel\PaperORM\Mapper\ColumnMapper;
-use Michel\PaperORM\Mapping\Column\JoinColumn;
-use Michel\PaperORM\Mapping\OneToMany;
 use Michel\PaperORM\Schema\SchemaInterface;
-use ReflectionClass;
+use Michel\PaperORM\Types\Type;
+use Michel\PaperORM\Types\TypeFactory;
 
 final class ArrayHydrator
 {
     private SchemaInterface $schema;
+
+    /**
+     * @var array<string, Type>
+     */
+    private array $types = [];
 
     public function __construct(SchemaInterface $schema)
     {
@@ -29,22 +30,15 @@ final class ArrayHydrator
         if (!is_subclass_of($object, EntityInterface::class)) {
             throw new LogicException('Class ' . $object . ' is not an Michel\PaperORM\Entity\EntityInterface');
         }
-        $columns = array_merge(ColumnMapper::getColumns($object), ColumnMapper::getOneToManyRelations($object));
-
         $result = [];
-        foreach ($columns as $column) {
-            if ($column instanceof OneToMany || $column instanceof JoinColumn) {
-                $name = $column->getProperty();
-            } else {
-                $name = $column->getName();
-            }
+        foreach (HydrationPlan::get($object) as [$name, $kind, $column, $typeClass]) {
             if (!array_key_exists($name, $data)) {
                 continue;
             }
 
             $value = $data[$name];
             $propertyName = $column->getProperty();
-            if ($column instanceof JoinColumn) {
+            if ($kind === HydrationPlan::JOIN) {
                 if (!is_array($value) && $value !== null) {
                     $value = null;
                 }
@@ -54,7 +48,7 @@ final class ArrayHydrator
                 }
                 $result[$propertyName] = $value;
                 continue;
-            } elseif ($column instanceof OneToMany) {
+            } elseif ($kind === HydrationPlan::ONE_TO_MANY) {
                 if (!is_array($value)) {
                     $value = [];
                 }
@@ -67,13 +61,24 @@ final class ArrayHydrator
                 unset($storage);
                 continue;
             }
-            $value =  $column->convertToPHP($value, $this->schema);
-            if ($value instanceof \DateTimeInterface) {
-                $value = $column->convertToDatabase($value, $this->schema);
+            if ($typeClass !== null) {
+                $type = $this->getType($typeClass);
+                $value = $type->convertToPHP($value);
+                if ($value instanceof \DateTimeInterface) {
+                    $value = $type->convertToDatabase($value);
+                }
             }
             $result[$propertyName] = $value;
         }
         return $result;
+    }
+
+    /**
+     * Same instance as Column::convertToPHP() would use, looked up once per hydrator instead of once per value.
+     */
+    private function getType(string $typeClass): Type
+    {
+        return $this->types[$typeClass] ?? ($this->types[$typeClass] = TypeFactory::create($this->schema, $typeClass));
     }
 
 }

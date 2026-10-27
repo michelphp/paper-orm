@@ -5,6 +5,7 @@ namespace Test\Michel\PaperORM;
 use Michel\PaperORM\EntityManager;
 use Michel\PaperORM\PaperConfiguration;
 use Michel\PaperORM\Proxy\ProxyInterface;
+use Michel\PaperORM\Query\QueryBuilder;
 use Michel\UniTester\TestCase;
 use Test\Michel\PaperORM\Entity\PostTest;
 use Test\Michel\PaperORM\Entity\UserTest;
@@ -30,6 +31,7 @@ class RepositoryTest extends TestCase
             $this->testSelectWithoutProxy($em);
             $this->testSelectInnerJoin($em);
             $this->testSelectLeftJoin($em);
+            $this->testResultIteratorMatchesResult($em);
             $em->getConnection()->close();
         }
     }
@@ -326,6 +328,31 @@ class RepositoryTest extends TestCase
             $this->assertInstanceOf(PostTest::class, $user->getLastPost());
             $this->assertStrictEquals($user, $user->getLastPost()->getUser());
             $this->assertEmpty($user->getPosts()->toArray());
+        }
+    }
+
+    public function testResultIteratorMatchesResult(EntityManager $em): void
+    {
+        $queryBuilder = static function () use ($em): QueryBuilder {
+            $qb = $em->getRepository(UserTest::class)->qb()->leftJoin(UserTest::class, PostTest::class, 'posts');
+            return $qb->orderBy($qb->getPrimaryAlias() . '.id');
+        };
+
+        $em->clear();
+        $expected = $queryBuilder()->getResult(QueryBuilder::HYDRATE_ARRAY);
+        $this->assertNotEmpty($expected);
+        $this->assertEquals($expected, iterator_to_array($queryBuilder()->getResultIterator(QueryBuilder::HYDRATE_ARRAY), false));
+
+        foreach ([QueryBuilder::HYDRATE_OBJECT_READONLY, QueryBuilder::HYDRATE_OBJECT] as $mode) {
+            $em->clear();
+            $users = iterator_to_array($queryBuilder()->getResultIterator($mode), false);
+            $this->assertStrictEquals(count($expected), count($users));
+            foreach ($users as $index => $user) {
+                $this->assertInstanceOf(UserTest::class, $user);
+                $this->assertStrictEquals($mode === QueryBuilder::HYDRATE_OBJECT, $user instanceof ProxyInterface);
+                $this->assertStrictEquals($expected[$index]['id'], $user->getId());
+                $this->assertStrictEquals(count($expected[$index]['posts']), count($user->getPosts()->toArray()));
+            }
         }
     }
 

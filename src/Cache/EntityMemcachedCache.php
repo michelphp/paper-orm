@@ -41,6 +41,7 @@ final class EntityMemcachedCache
 
     private function generateKey(string $class, string $primaryKeyValue): string
     {
-        return md5($class . $primaryKeyValue);
+        // A class name cannot contain "#": the key is unique without hashing it.
+        return $class . '#' . $primaryKeyValue;
     }
 }
