@@ -6,21 +6,7 @@ use LogicException;
 use Michel\PaperORM\Cache\PropertyReflectionCache;
 use Michel\UniTester\TestCase;
 
-class PropertyReflectionCacheBase
-{
-    private ?int $id = null;
-}
-
-class PropertyReflectionCacheEntity extends PropertyReflectionCacheBase
-{
-    private ?string $name = null;
-}
-
-// Same shape as a generated proxy: extends the entity, declares nothing.
-class PropertyReflectionCacheProxy extends PropertyReflectionCacheEntity
-{
-}
-
+// The test class comes first: the test finder only reads the first class of a file.
 class PropertyReflectionCacheTest extends TestCase
 {
     protected function setUp(): void
@@ -81,4 +67,19 @@ class PropertyReflectionCacheTest extends TestCase
             PropertyReflectionCache::get(PropertyReflectionCacheEntity::class, 'unknown');
         });
     }
+}
+
+class PropertyReflectionCacheBase
+{
+    private ?int $id = null;
+}
+
+class PropertyReflectionCacheEntity extends PropertyReflectionCacheBase
+{
+    private ?string $name = null;
+}
+
+// Same shape as a generated proxy: extends the entity, declares nothing.
+class PropertyReflectionCacheProxy extends PropertyReflectionCacheEntity
+{
 }
