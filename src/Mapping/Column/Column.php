@@ -20,6 +20,11 @@ abstract class Column
     private ?string $firstArgument;
     private ?string $secondArgument;
 
+    /**
+     * Column name derived from the property, computed once: getName() is called for every hydrated value.
+     */
+    private ?string $resolvedName = null;
+
      public function __construct(
           string $property,
           ?string $name = null,
@@ -61,6 +66,7 @@ abstract class Column
     public function bindProperty(string $propertyName): self
     {
         $this->property = $propertyName;
+        $this->resolvedName = null;
         return $this;
     }
 
@@ -74,8 +80,10 @@ abstract class Column
 
     final public function getName(): ?string
     {
-        $property = $this->getProperty();
-        return $this->name ?:  NamingStrategy::toSnakeCase($property);
+        if ($this->resolvedName === null) {
+            $this->resolvedName = $this->name ?: NamingStrategy::toSnakeCase($this->getProperty());
+        }
+        return $this->resolvedName;
     }
 
 
