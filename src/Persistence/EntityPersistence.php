@@ -21,6 +21,12 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 
 class EntityPersistence
 {
+    /**
+     * Name of the primary key parameter of an UPDATE, cannot collide with a column parameter: column names
+     * are bound under their own name and "__paper_pk" is not a name anyone gives to a column.
+     */
+    private const PRIMARY_KEY_PARAMETER = '__paper_pk';
+
     private EntityManagerInterface $em;
 
     private PlatformInterface $platform;
@@ -104,19 +110,17 @@ class EntityPersistence
 
         $tableName = EntityMapper::getTable($entity);
         $schema = $this->platform->getSchema();
+        // The primary key is bound, not written in the SQL: a string key (uuid...) stays valid SQL, and the updates
+        // of the same columns share one SQL text, so the connection prepares it once.
         $qb = QueryBuilder::update($schema->quote($tableName))
-            ->where(
-                sprintf('%s = %s',
-                    $schema->quote(ColumnMapper::getPrimaryKeyColumnName($entity)),
-                    $entity->getPrimaryKeyValue()
-                )
-            );
+            ->where(sprintf('%s = :%s', $schema->quote(ColumnMapper::getPrimaryKeyColumnName($entity)), self::PRIMARY_KEY_PARAMETER));
 
         $values = [];
         foreach ((new SerializerToDb($entity, $schema))->serialize($propertiesModified) as $key => $value) {
             $qb->set($schema->quote($key), ":$key");
             $values[$key] = $value;
         }
+        $values[self::PRIMARY_KEY_PARAMETER] = $entity->getPrimaryKeyValue();
         $rows = $this->execute($qb, $values);
         if ($rows > 0) {
             if ($entity instanceof ProxyInterface) {

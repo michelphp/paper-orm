@@ -21,6 +21,14 @@ final class PaperConnection
     private bool $debug;
     private ?LoggerInterface $logger = null;
 
+    /**
+     * Prepared write statements, reused when the same SQL comes back (e.g. the updates of one flush()).
+     *
+     * @var array<string, PDOStatement>
+     */
+    private array $statements = [];
+    private const MAX_PREPARED_STATEMENTS = 100;
+
     public function __construct(DriverInterface $driver, array $params)
     {
         $this->params = $params;
@@ -32,16 +40,41 @@ final class PaperConnection
 
     public function executeStatement(string $query, array $params = []): int
     {
-        $db = $this->executeQuery($query, $params);
+        // Only statements with parameters are reused: they return no rows, so no open cursor can be shared,
+        // and they are the ones repeated with other values. Schema statements are prepared each time.
+        if ($params === []) {
+            return $this->executeQuery($query)->rowCount();
+        }
+
+        $db = $this->statements[$query] ?? null;
+        if ($db === null) {
+            if (count($this->statements) >= self::MAX_PREPARED_STATEMENTS) {
+                array_shift($this->statements);
+            }
+            $db = $this->statements[$query] = $this->prepare($query);
+        }
+        $this->bindAndExecute($db, $params);
         return $db->rowCount();
     }
 
     public function executeQuery(string $query, array $params = []): PDOStatement
     {
+        $db = $this->prepare($query);
+        $this->bindAndExecute($db, $params);
+        return $db;
+    }
+
+    private function prepare(string $query): PDOStatement
+    {
         $db = $this->getPdo()->prepare($query);
         if ($db === false) {
             throw new Exception($this->getPdo()->errorInfo()[2]);
         }
+        return $db;
+    }
+
+    private function bindAndExecute(PDOStatement $db, array $params): void
+    {
         foreach ($params as $key => $value) {
             if (is_string($key)) {
                 $db->bindValue(':' . $key, $value);
@@ -50,7 +83,6 @@ final class PaperConnection
             }
         }
         $db->execute();
-        return $db;
     }
 
     public function fetch(string $query, array $params = []): ?array
@@ -104,6 +136,8 @@ final class PaperConnection
 
     public function close(): void
     {
+        // The prepared statements keep a reference to the PDO connection: release them too.
+        $this->statements = [];
         $this->pdo = null;
     }
 
