@@ -33,6 +33,7 @@ class RepositoryTest extends TestCase
             $this->testSelectLeftJoin($em);
             $this->testResultIteratorMatchesResult($em);
             $this->testSameQueryShapeWithOtherParameters($em);
+            $this->testListParameter($em);
             $em->getConnection()->close();
         }
     }
@@ -354,6 +355,52 @@ class RepositoryTest extends TestCase
         $built = $userRepository->qb()->buildSqlQuery();
         $built->where('1 = 0');
         $this->assertStrictEquals(5, count($userRepository->qb()->getResult(QueryBuilder::HYDRATE_ARRAY)));
+    }
+
+    /**
+     * A list parameter gives one placeholder per value, not one string '2,4'.
+     */
+    public function testListParameter(EntityManager $em): void
+    {
+        $userRepository = $em->getRepository(UserTest::class);
+        $em->clear();
+        $ids = static function (QueryBuilder $qb): array {
+            return array_column($qb->orderBy($qb->getPrimaryAlias() . '.id')->getResult(QueryBuilder::HYDRATE_ARRAY), 'id');
+        };
+
+        foreach ([[2, 4], [5], [1, 3, 5]] as $values) {
+            $qb = $userRepository->qb();
+            $qb->where($qb->getPrimaryAlias() . '.id IN (:ids)')->setParam('ids', $values);
+            $this->assertStrictEquals($values, $ids($qb));
+        }
+
+        // :id is not a part of :ids, and :ids is not a part of :id.
+        $qb = $userRepository->qb();
+        $alias = $qb->getPrimaryAlias();
+        $qb->where("$alias.id IN (:ids)", "$alias.id <> :id")->setParam('ids', [2, 4])->setParam('id', 4);
+        $this->assertStrictEquals([2], $ids($qb));
+
+        $qb = $userRepository->qb();
+        $qb->where($qb->getPrimaryAlias() . '.id NOT IN (:ids)')->setParam('ids', new \ArrayIterator([1, 2, 3]));
+        $this->assertStrictEquals([4, 5], $ids($qb));
+
+        $users = [$userRepository->find(3)->toObject(), $userRepository->find(1)->toObject()];
+        $qb = $userRepository->qb();
+        $qb->where($qb->getPrimaryAlias() . '.id IN (:users)')->setParam('users', $users);
+        $this->assertStrictEquals([1, 3], $ids($qb));
+
+        $qb = $userRepository->qb();
+        $qb->rawWhere($qb->getPrimaryAlias() . '.id IN (:ids)')->setParam('ids', [2, 3]);
+        $this->assertStrictEquals([2, 3], $ids($qb));
+
+        $rejected = false;
+        try {
+            $qb = $userRepository->qb();
+            $qb->where($qb->getPrimaryAlias() . '.id IN (:ids)')->setParam('ids', [])->getResult();
+        } catch (\InvalidArgumentException $e) {
+            $rejected = true;
+        }
+        $this->assertTrue($rejected, 'An empty list must be refused');
     }
 
     public function testResultIteratorMatchesResult(EntityManager $em): void

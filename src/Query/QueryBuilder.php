@@ -333,22 +333,25 @@ final class QueryBuilder
 
         // The same shape gives the same SQL: it is built once per connection, then only the parameters change.
         // Each call gets its own copy, the cached one is never modified.
+        [$where, $rawWhere, $params] = $this->resolveParams();
         $connection = $this->platform->getConnection();
-        $key = $this->getShapeKey();
+        $key = $this->getShapeKey($where, $rawWhere);
         $query = $key === null ? null : $connection->getCachedQuery($key);
         if (!$query instanceof JoinQL) {
-            $query = $this->createSqlQuery();
+            $query = $this->createSqlQuery($where, $rawWhere);
             if ($key !== null) {
                 $connection->cacheQuery($key, $query);
             }
         }
 
         $joinQl = clone $query;
-        $this->applyParams($joinQl);
+        foreach ($params as $name => $value) {
+            $joinQl->setParam($name, $value);
+        }
         return $joinQl;
     }
 
-    private function createSqlQuery(): JoinQL
+    private function createSqlQuery(array $where, array $rawWhere): JoinQL
     {
         if ($this->select === []) {
             throw new LogicException('No query specified');
@@ -436,12 +439,12 @@ final class QueryBuilder
             }
         }
 
-        foreach ($this->where as $where) {
-            $joinQl->where($this->resolveExpression($where));
+        foreach ($where as $expression) {
+            $joinQl->where($this->resolveExpression($expression));
         }
 
-        foreach ($this->rawWhere as $rawWhere) {
-            $joinQl->where($rawWhere);
+        foreach ($rawWhere as $sql) {
+            $joinQl->where($sql);
         }
 
         foreach ($this->orderBy as $orderBy) {
@@ -461,10 +464,10 @@ final class QueryBuilder
      * Identifies the SQL this builder produces: entity, selected columns, joins, conditions, order and
      * pagination, but not the parameter values. Null when the query must not be cached.
      */
-    private function getShapeKey(): ?string
+    private function getShapeKey(array $where, array $rawWhere): ?string
     {
         // A raw condition is free SQL that may embed values: every value would be a new shape.
-        if ($this->rawWhere !== []) {
+        if ($rawWhere !== []) {
             return null;
         }
 
@@ -485,7 +488,7 @@ final class QueryBuilder
             $this->select['entityName'],
             $this->select['alias'],
             self::getPropertyNames($this->select['properties']),
-            $this->where,
+            $where,
             $this->orderBy,
             $joins,
             $this->firstResult,
@@ -505,25 +508,48 @@ final class QueryBuilder
         }, $properties);
     }
 
-    private function applyParams(JoinQL $joinQl): void
+    /**
+     * Resolves the parameter values, and gives each value of a list its own placeholder: `IN (:ids)` with
+     * [1, 2] becomes `IN (:ids__0, :ids__1)`. Bound to a single placeholder, the list would be one string, '1,2'.
+     *
+     * @return array{0: array<string>, 1: array<string>, 2: array} the conditions, the raw conditions, the parameters
+     */
+    private function resolveParams(): array
     {
+        $where = $this->where;
+        $rawWhere = $this->rawWhere;
+        $params = [];
         foreach ($this->params as $key => $value) {
             if ($value instanceof EntityInterface) {
-                $value = $value->getPrimaryKeyValue();
-            }elseif (is_iterable($value)) {
-                $values = [];
-                foreach ($value as $v) {
-                    if ($v instanceof EntityInterface) {
-                        $values[] = $v->getPrimaryKeyValue();
-                    }else {
-                        $values[] = $v;
-                    }
-                }
-                $value = implode(',', $values);
+                $params[$key] = $value->getPrimaryKeyValue();
+                continue;
+            }
+            if (!is_iterable($value)) {
+                $params[$key] = $value;
+                continue;
             }
 
-            $joinQl->setParam($key, $value);
+            if (!is_string($key)) {
+                throw new InvalidArgumentException(sprintf('The list parameter at position %d must be named: a "?" cannot hold several values.', $key));
+            }
+            $placeholders = [];
+            foreach ($value as $v) {
+                $name = $key . '__' . count($placeholders);
+                $placeholders[] = ':' . $name;
+                $params[$name] = $v instanceof EntityInterface ? $v->getPrimaryKeyValue() : $v;
+            }
+            if ($placeholders === []) {
+                throw new InvalidArgumentException(sprintf('The list parameter "%s" is empty: "IN ()" is not valid SQL.', $key));
+            }
+
+            // :ids, but not :ids_other nor a ::cast.
+            $pattern = sprintf('/(?<![:\w]):%s(?!\w)/', preg_quote($key, '/'));
+            $replacement = implode(', ', $placeholders);
+            $where = preg_replace_callback($pattern, static fn() => $replacement, $where);
+            $rawWhere = preg_replace_callback($pattern, static fn() => $replacement, $rawWhere);
         }
+
+        return [$where, $rawWhere, $params];
     }
 
     public function getAliasesFromEntityName(string $entityName, string $property = null): array
