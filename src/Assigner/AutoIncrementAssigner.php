@@ -29,6 +29,8 @@ final class AutoIncrementAssigner implements ValueAssignerInterface, CommitAssig
 
         $result = self::determineSequenceIdentifiers($column);
         $prefix = $result['sequence'];
+        // Held until commit() after the insert: another process cannot take the same value meanwhile.
+        $this->sequenceManager->lock($result['key']);
         $counter = $this->sequenceManager->peek($result['key']);
         $formatted = sprintf(
             '%s%s',

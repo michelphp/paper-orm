@@ -2,9 +2,13 @@
 
 namespace Test\Michel\PaperORM;
 
+use Michel\Lock\Handler\FlockHandler;
+use Michel\Lock\LockHandlerInterface;
+use Michel\Lock\Locker;
 use Michel\PaperORM\Collector\EntityDirCollector;
 use Michel\PaperORM\EntityManager;
 use Michel\PaperORM\Expression\Expr;
+use Michel\PaperORM\Manager\PaperSequenceManager;
 use Michel\PaperORM\Migration\PaperMigration;
 use Michel\PaperORM\PaperConfiguration;
 use Michel\PaperORM\Proxy\ProxyInterface;
@@ -62,6 +66,54 @@ class RegistryTest extends TestCase
         $em->sequence()->increment("test");
         $value = $em->sequence()->peek("test");
         $this->assertEquals(2, $value);
+
+        $this->testSequenceLock($em);
+    }
+
+    private function testSequenceLock(EntityManager $em): void
+    {
+        $handler = new class implements LockHandlerInterface {
+            public array $calls = [];
+
+            public function lock(string $key, bool $wait = false): bool
+            {
+                $this->calls[] = $wait ? 'lock (wait)' : 'lock';
+                return true;
+            }
+
+            public function unlock(string $key): void
+            {
+                $this->calls[] = 'unlock';
+            }
+        };
+        $sequence = new PaperSequenceManager($em->registry(), new Locker($handler));
+
+        // Locked once, released by increment().
+        $sequence->lock('test');
+        $sequence->lock('TEST');
+        $sequence->peek('test');
+        $sequence->increment('test');
+        $this->assertEquals(['lock (wait)', 'unlock'], $handler->calls);
+
+        // Not locked by the caller: increment() locks for its own read and write.
+        $sequence->increment('test');
+        $this->assertEquals(['lock (wait)', 'unlock', 'lock (wait)', 'unlock'], $handler->calls);
+
+        // unlockAll() releases what an insert left locked, once.
+        $sequence->lock('test');
+        $sequence->unlockAll();
+        $sequence->unlockAll();
+        $this->assertEquals(['lock (wait)', 'unlock', 'lock (wait)', 'unlock', 'lock (wait)', 'unlock'], $handler->calls);
+        $this->assertEquals(4, $sequence->peek('test'));
+
+        // With the real file lock, another handle cannot take a locked sequence.
+        $other = new FlockHandler();
+        $lockKey = 'paper_sequence.' . md5('test');
+        $em->sequence()->lock('test');
+        $this->assertFalse($other->lock($lockKey));
+        $em->sequence()->unlockAll();
+        $this->assertTrue($other->lock($lockKey));
+        $other->unlock($lockKey);
     }
 
 }

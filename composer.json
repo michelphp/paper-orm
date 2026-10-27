@@ -28,6 +28,7 @@
     "michel/michel-package-starter": "^1.0",
     "michel/filesystem": "^1.0",
     "michel/psr14-event-dispatcher": "^1.0",
+    "michel/lock": "^1.0",
     "psr/log": "^1.1|^2.0|^3.0"
   },
   "require-dev": {

@@ -55,29 +55,34 @@ class EntityPersistence
             ));
         }
 
-        if ($this->dispatcher) {
-            $this->dispatcher->dispatch(new PreCreateEvent($this->em, $entity));
-        }
-
-        $schema = $this->platform->getSchema();
-        $tableName = EntityMapper::getTable($entity);
-        $qb = QueryBuilder::insert($schema->quote($tableName));
-
-        $values = [];
-        foreach ((new SerializerToDb($entity, $schema))->serialize() as $key => $value) {
-            $qb->setValue($schema->quote($key), ":$key");
-            $values[$key] = $value;
-        }
-        $rows = $this->execute($qb, $values);
-        $conn = $this->platform->getConnection();
-        $lastInsertId = $conn->getPdo()->lastInsertId();
-        if ($rows > 0) {
-            $primaryKeyColumn = ColumnMapper::getPrimaryKeyColumnName($entity);
-            (new ReadOnlyEntityHydrator($schema))->hydrate($entity, [$primaryKeyColumn => $lastInsertId]);
-            $this->managed->attach($entity);
+        try {
             if ($this->dispatcher) {
-                $this->dispatcher->dispatch(new PostCreateEvent($this->em, $entity));
+                $this->dispatcher->dispatch(new PreCreateEvent($this->em, $entity));
             }
+
+            $schema = $this->platform->getSchema();
+            $tableName = EntityMapper::getTable($entity);
+            $qb = QueryBuilder::insert($schema->quote($tableName));
+
+            $values = [];
+            foreach ((new SerializerToDb($entity, $schema))->serialize() as $key => $value) {
+                $qb->setValue($schema->quote($key), ":$key");
+                $values[$key] = $value;
+            }
+            $rows = $this->execute($qb, $values);
+            $conn = $this->platform->getConnection();
+            $lastInsertId = $conn->getPdo()->lastInsertId();
+            if ($rows > 0) {
+                $primaryKeyColumn = ColumnMapper::getPrimaryKeyColumnName($entity);
+                (new ReadOnlyEntityHydrator($schema))->hydrate($entity, [$primaryKeyColumn => $lastInsertId]);
+                $this->managed->attach($entity);
+                if ($this->dispatcher) {
+                    $this->dispatcher->dispatch(new PostCreateEvent($this->em, $entity));
+                }
+            }
+        } finally {
+            // The sequences locked by PreCreateEvent are released by PostCreateEvent; if the insert failed, here.
+            $this->em->sequence()->unlockAll();
         }
         return $rows;
     }
