@@ -29,6 +29,15 @@ final class PaperConnection
     private array $statements = [];
     private const MAX_PREPARED_STATEMENTS = 100;
 
+    /**
+     * Built queries, by shape (see QueryBuilder::buildSqlQuery()). They hold the PDO connection, so they live
+     * and die with it.
+     *
+     * @var array<string, object>
+     */
+    private array $queries = [];
+    private const MAX_QUERIES = 256;
+
     public function __construct(DriverInterface $driver, array $params)
     {
         $this->params = $params;
@@ -134,10 +143,25 @@ final class PaperConnection
         return $this->pdo !== null;
     }
 
+    public function getCachedQuery(string $key): ?object
+    {
+        return $this->queries[$key] ?? null;
+    }
+
+    public function cacheQuery(string $key, object $query): void
+    {
+        if (count($this->queries) >= self::MAX_QUERIES) {
+            // Drop the oldest one, in constant time.
+            unset($this->queries[array_key_first($this->queries)]);
+        }
+        $this->queries[$key] = $query;
+    }
+
     public function close(): void
     {
-        // The prepared statements keep a reference to the PDO connection: release them too.
+        // The prepared statements and the built queries keep a reference to the PDO connection: release them too.
         $this->statements = [];
+        $this->queries = [];
         $this->pdo = null;
     }
 

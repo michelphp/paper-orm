@@ -331,6 +331,29 @@ final class QueryBuilder
             throw new LogicException('No query specified');
         }
 
+        // The same shape gives the same SQL: it is built once per connection, then only the parameters change.
+        // Each call gets its own copy, the cached one is never modified.
+        $connection = $this->platform->getConnection();
+        $key = $this->getShapeKey();
+        $query = $key === null ? null : $connection->getCachedQuery($key);
+        if (!$query instanceof JoinQL) {
+            $query = $this->createSqlQuery();
+            if ($key !== null) {
+                $connection->cacheQuery($key, $query);
+            }
+        }
+
+        $joinQl = clone $query;
+        $this->applyParams($joinQl);
+        return $joinQl;
+    }
+
+    private function createSqlQuery(): JoinQL
+    {
+        if ($this->select === []) {
+            throw new LogicException('No query specified');
+        }
+
         $properties = $this->select['properties'];
         $entityName = $this->select['entityName'];
         $alias = $this->select['alias'];
@@ -425,6 +448,65 @@ final class QueryBuilder
             $joinQl->orderBy($this->resolveExpression($orderBy['sort']), $orderBy['order']);
         }
 
+        if ($this->maxResults) {
+            $joinQl->setMaxResults($this->maxResults);
+        }
+        if ($this->firstResult) {
+            $joinQl->setFirstResult($this->firstResult);
+        }
+        return $joinQl;
+    }
+
+    /**
+     * Identifies the SQL this builder produces: entity, selected columns, joins, conditions, order and
+     * pagination, but not the parameter values. Null when the query must not be cached.
+     */
+    private function getShapeKey(): ?string
+    {
+        // A raw condition is free SQL that may embed values: every value would be a new shape.
+        if ($this->rawWhere !== []) {
+            return null;
+        }
+
+        $joins = [];
+        foreach ($this->joins as $alias => $join) {
+            $joins[] = [
+                $join['type'],
+                $alias,
+                $join['fromAlias'],
+                $join['targetEntity'],
+                $join['property'],
+                $join['column']->getProperty(),
+                self::getPropertyNames($join['columnsToSelect']),
+            ];
+        }
+
+        $key = json_encode([
+            $this->select['entityName'],
+            $this->select['alias'],
+            self::getPropertyNames($this->select['properties']),
+            $this->where,
+            $this->orderBy,
+            $joins,
+            $this->firstResult,
+            $this->maxResults,
+        ]);
+
+        return $key === false ? null : $key;
+    }
+
+    private static function getPropertyNames(?array $properties): ?array
+    {
+        if ($properties === null) {
+            return null;
+        }
+        return array_map(static function ($property) {
+            return $property instanceof Column ? $property->getProperty() : (string)$property;
+        }, $properties);
+    }
+
+    private function applyParams(JoinQL $joinQl): void
+    {
         foreach ($this->params as $key => $value) {
             if ($value instanceof EntityInterface) {
                 $value = $value->getPrimaryKeyValue();
@@ -442,14 +524,6 @@ final class QueryBuilder
 
             $joinQl->setParam($key, $value);
         }
-
-        if ($this->maxResults) {
-            $joinQl->setMaxResults($this->maxResults);
-        }
-        if ($this->firstResult) {
-            $joinQl->setFirstResult($this->firstResult);
-        }
-        return $joinQl;
     }
 
     public function getAliasesFromEntityName(string $entityName, string $property = null): array

@@ -32,6 +32,7 @@ class RepositoryTest extends TestCase
             $this->testSelectInnerJoin($em);
             $this->testSelectLeftJoin($em);
             $this->testResultIteratorMatchesResult($em);
+            $this->testSameQueryShapeWithOtherParameters($em);
             $em->getConnection()->close();
         }
     }
@@ -329,6 +330,30 @@ class RepositoryTest extends TestCase
             $this->assertStrictEquals($user, $user->getLastPost()->getUser());
             $this->assertEmpty($user->getPosts()->toArray());
         }
+    }
+
+    /**
+     * The SQL of a query shape is built once per connection: other parameter values must still give their own result.
+     */
+    public function testSameQueryShapeWithOtherParameters(EntityManager $em): void
+    {
+        $userRepository = $em->getRepository(UserTest::class);
+        $em->clear();
+        foreach ([1, 2, 3, 1] as $id) {
+            $this->assertStrictEquals($id, $userRepository->find($id)->toArray()['id']);
+        }
+        $this->assertNull($userRepository->find(999)->toArray());
+
+        $em->clear();
+        foreach ([[2, 3], [4, 5], [1, 2, 3, 4, 5]] as $ids) {
+            $users = $userRepository->findBy(['id' => $ids])->orderBy('id')->toArray();
+            $this->assertStrictEquals($ids, array_column($users, 'id'));
+        }
+
+        // Modifying a built query must not change the cached one.
+        $built = $userRepository->qb()->buildSqlQuery();
+        $built->where('1 = 0');
+        $this->assertStrictEquals(5, count($userRepository->qb()->getResult(QueryBuilder::HYDRATE_ARRAY)));
     }
 
     public function testResultIteratorMatchesResult(EntityManager $em): void
