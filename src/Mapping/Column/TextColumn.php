@@ -9,9 +9,9 @@ use Michel\PaperORM\Types\StringType;
 final class TextColumn extends Column
 {
     public function __construct(
-        string $name = null,
+        ?string $name = null,
         bool   $nullable = false,
-        string $defaultValue = null
+        ?string $defaultValue = null
     )
     {
         parent::__construct('', $name, StringType::class, $nullable, $defaultValue);

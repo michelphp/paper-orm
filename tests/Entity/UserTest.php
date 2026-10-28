@@ -2,7 +2,6 @@
 
 namespace Test\Michel\PaperORM\Entity;
 
-use Cassandra\Time;
 use Michel\PaperORM\Collection\ObjectStorage;
 use Michel\PaperORM\Entity\EntityInterface;
 use Michel\PaperORM\Mapping\Column\BoolColumn;
@@ -51,35 +50,6 @@ class UserTest implements EntityInterface
     public function __construct()
     {
         $this->posts = new ObjectStorage();
-    }
-
-    static public function getTableName(): string
-    {
-        return 'user';
-    }
-
-    static public function getRepositoryName(): ?string
-    {
-        return null;
-    }
-
-    static public function columnsMapping(): array
-    {
-        if (PHP_VERSION_ID > 80000) {
-            return [];
-        }
-        return [
-            (new PrimaryKeyColumn())->bindProperty('id'),
-            (new StringColumn())->bindProperty('firstname'),
-            (new StringColumn())->bindProperty('lastname'),
-            (new StringColumn())->bindProperty('email'),
-            (new StringColumn())->bindProperty('password'),
-            (new TokenColumn(null, 32))->bindProperty('token'),
-            (new BoolColumn( 'is_active'))->bindProperty('active'),
-            (new TimestampColumn( null, true))->bindProperty('createdAt'),
-            (new OneToMany( PostTest::class,  'user'))->bindProperty('posts'),
-            (new JoinColumn( 'last_post_id', PostTest::class, 'id', true, true, JoinColumn::SET_NULL))->bindProperty('lastPost'),
-        ];
     }
 
     public function getPrimaryKeyValue() : ?int

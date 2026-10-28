@@ -12,7 +12,7 @@ final class TimestampColumn extends Column
     private bool $onCreated;
     private bool $onUpdated;
     public function __construct(
-        string $name = null,
+        ?string $name = null,
         bool $onCreated = false,
         bool $onUpdated = false,
         bool   $nullable = true

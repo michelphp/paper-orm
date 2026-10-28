@@ -14,7 +14,7 @@ final class AutoIncrementColumn extends Column
     private ?string $prefix;
     public function __construct(
         string  $name = null,
-        string $key = null,
+        ?string $key = null,
         int     $pad = 6,
         ?string $prefix = null,
         bool    $nullable = false

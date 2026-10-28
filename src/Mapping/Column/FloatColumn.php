@@ -9,7 +9,7 @@ final class FloatColumn extends Column
 {
 
     public function __construct(
-        string $name = null,
+        ?string $name = null,
         bool   $nullable = false,
         ?float $defaultValue = null,
         bool   $unique = false

@@ -10,7 +10,7 @@ use Michel\PaperORM\Types\StringType;
 final class BinaryColumn extends Column
 {
     public function __construct(
-        string $name = null,
+        ?string $name = null,
         bool   $nullable = false
     )
     {

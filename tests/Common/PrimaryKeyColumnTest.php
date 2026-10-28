@@ -23,9 +23,7 @@ class PrimaryKeyColumnTest extends TestCase
     protected function execute(): void
     {
         $this->testPrimaryKeyDeclaredLast();
-        if (PHP_VERSION_ID >= 80000) {
-            $this->testInheritedPrimaryKey();
-        }
+        $this->testInheritedPrimaryKey();
     }
 
     private function testPrimaryKeyDeclaredLast(): void

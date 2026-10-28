@@ -12,7 +12,7 @@ interface EntityManagerInterface
 {
     public function persist(object $entity): void;
     public function remove(object $entity): void;
-    public function flush(object $entity = null ): void;
+    public function flush(?object $entity = null ): void;
     public function registry(): PaperKeyValueManager;
     public function sequence(): PaperSequenceManager;
     public function getRepository(string $entity): Repository;

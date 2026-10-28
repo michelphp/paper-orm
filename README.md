@@ -8,7 +8,7 @@ PaperORM is a PHP ORM designed for projects requiring a lightweight yet performa
 
 ## English
 
-PaperORM is a PHP ORM designed for projects requiring a lightweight yet performant object-relational mapping solution. Specifically developed for PHP 7.4 and above, it positions itself as a lighter alternative to existing solutions.
+PaperORM is a PHP ORM designed for projects requiring a lightweight yet performant object-relational mapping solution. Specifically developed for PHP 8.2 and above, it positions itself as a lighter alternative to existing solutions.
 
 At just 5MB compared to Doctrine's 75MB with dependencies, PaperORM offers the essential features of a modern ORM while maintaining a minimal footprint. It includes:
 - Database schema management
@@ -73,42 +73,6 @@ $em = EntityManager::createFromConfig($configuration);
 > **Note**: The `repository` attribute/method is optional. If none is defined, a dummy repository will be automatically generated.
 
 ### Defining an Entity
-
-#### PHP 7.4 < 8
-
-```php
-use Michel\PaperORM\Entity\EntityInterface;
-use Michel\PaperORM\Mapping\{PrimaryKeyColumn, StringColumn, BoolColumn, DateTimeColumn, OneToMany, JoinColumn};
-
-class User implements EntityInterface
-{
-    private ?int $id = null;
-    private string $name;
-    private string $email;
-    private bool $isActive = true;
-    private \DateTime $createdAt;
-    
-    public static function getTableName(): string 
-    {
-        return 'users';
-    }
-    
-    public static function columnsMapping(): array
-    {
-        return [
-            (new PrimaryKeyColumn())->bindProperty('id'),
-            (new StringColumn())->bindProperty('name'),
-            (new StringColumn())->bindProperty('email'),
-            (new BoolColumn('is_active'))->bindProperty('isActive'), // 'is_active' is the column name
-            (new DateTimeColumn('created_at'))->bindProperty('createdAt') // 'created_at' is the column name
-        ];
-    }
-    
-    // Getters/Setters...
-}
-```
-
-#### PHP 8+ with attributes
 
 ```php
 use Michel\PaperORM\Entity\EntityInterface;
@@ -243,7 +207,7 @@ Complete documentation is being written. You can:
 
 ## Français
 
-PaperORM est un ORM PHP conçu pour les projets qui nécessitent une solution de mapping objet-relationnel légère et performante. Développé spécifiquement pour PHP 7.4 et versions ultérieures, il se positionne comme une alternative plus légère aux solutions existantes.
+PaperORM est un ORM PHP conçu pour les projets qui nécessitent une solution de mapping objet-relationnel légère et performante. Développé spécifiquement pour PHP 8.2 et versions ultérieures, il se positionne comme une alternative plus légère aux solutions existantes.
 
 Avec seulement 3Mo contre 75Mo pour Doctrine avec ses dépendances, PaperORM propose les fonctionnalités essentielles d'un ORM moderne tout en conservant une empreinte minimale. Il intègre notamment :
 - La gestion des schémas de base de données
@@ -310,42 +274,6 @@ $em = EntityManager::createFromConfig($configuration);
 > **Note**: L’attribut ou la méthode `repository` est facultatif. Si aucun n’est défini, un repository fictif sera généré automatiquement.
 
 ### Définition d'une entité
-
-#### PHP 7.4 < 8
-
-```php
-use Michel\PaperORM\Entity\EntityInterface;
-use Michel\PaperORM\Mapping\{PrimaryKeyColumn, StringColumn, BoolColumn, DateTimeColumn, OneToMany, JoinColumn};
-
-class User implements EntityInterface
-{
-    private ?int $id = null;
-    private string $name;
-    private string $email;
-    private bool $isActive = true;
-    private \DateTime $createdAt;
-    
-    public static function getTableName(): string 
-    {
-        return 'users';
-    }
-    
-    public static function columnsMapping(): array
-    {
-        return [
-            new PrimaryKeyColumn('id'),
-            new StringColumn('name'),
-            new StringColumn('email'),
-            new BoolColumn('isActive'),
-            new DateTimeColumn('createdAt')
-        ];
-    }
-    
-    // Getters/Setters...
-}
-```
-
-#### PHP 8+ avec attributs
 
 ```php
 use Michel\PaperORM\Entity\EntityInterface;

@@ -23,7 +23,7 @@ class Expr
         $this->value = $value;
     }
 
-    public function toPrepared(string $alias = null): string
+    public function toPrepared(?string $alias = null): string
     {
         $this->prepared = true;
         $this->alias = $alias;

@@ -67,7 +67,7 @@ final class EntityExplorer
             }
 
             if ($isExtractingNamespace) {
-                if (is_array($token) && in_array($token[0], [T_STRING, T_NS_SEPARATOR,  265 /* T_NAME_QUALIFIED For PHP 8*/])) {
+                if (is_array($token) && in_array($token[0], [T_STRING, T_NAME_QUALIFIED])) {
                     $namespace .= $token[1];
                 } else if ($token === ';') {
                     $isExtractingNamespace = false;

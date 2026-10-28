@@ -8,7 +8,7 @@ use Michel\PaperORM\Types\StringType;
 final class UuidColumn extends Column
 {
     public function __construct(
-        string $name = null,
+        ?string $name = null,
         bool   $nullable = false,
         ?int $defaultValue = null
     )

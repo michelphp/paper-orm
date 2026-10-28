@@ -22,28 +22,6 @@ class TagTest implements EntityInterface
     #[JoinColumn(name : 'post_id', targetEntity : PostTest::class)]
     private ?PostTest $post = null;
 
-    static public function getTableName(): string
-    {
-        return 'tag';
-    }
-
-    static public function getRepositoryName(): string
-    {
-        return TagTestRepository::class;
-    }
-
-    static public function columnsMapping(): array
-    {
-        if (PHP_VERSION_ID > 80000) {
-            return [];
-        }
-        return [
-            (new PrimaryKeyColumn())->bindProperty('id'),
-            (new StringColumn())->bindProperty('name'),
-            (new JoinColumn( 'post_id', PostTest::class))->bindProperty('post'),
-        ];
-    }
-
     public function getPrimaryKeyValue() : ?int
     {
         return $this->getId();

@@ -9,7 +9,7 @@ final class Index
 
     private bool $unique = false;
     private ?string $name;
-    public function __construct(array $columns, bool $unique = false, string $name = null)
+    public function __construct(array $columns, bool $unique = false, ?string $name = null)
     {
         $this->columns = $columns;
         $this->unique = $unique;

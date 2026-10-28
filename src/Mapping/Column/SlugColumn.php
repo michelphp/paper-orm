@@ -12,7 +12,7 @@ final class SlugColumn extends Column
     private string $separator;
 
     public function __construct(
-        string $name = null,
+        ?string $name = null,
         array  $from = [],
         string $separator = '-',
         int    $length = 128,

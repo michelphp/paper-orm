@@ -20,25 +20,6 @@ class InvoiceTest implements EntityInterface
     private ?string $code = null;
 
 
-    static public function getTableName(): string
-    {
-        return 'invoice';
-    }
-
-    static public function getRepositoryName(): ?string
-    {
-        return null;
-    }
-
-    static public function columnsMapping(): array
-    {
-        return [
-            (new PrimaryKeyColumn())->bindProperty('id'),
-            (new AutoIncrementColumn(null, 'invoice.number', 6, 'INV-{YYYY}-'))->bindProperty('number'),
-            (new AutoIncrementColumn(null, 'invoice.code', 8, null))->bindProperty('code')
-        ];
-    }
-
     public function getPrimaryKeyValue(): ?int
     {
         return $this->getId();

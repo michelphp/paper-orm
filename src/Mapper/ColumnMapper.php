@@ -147,52 +147,40 @@ final class ColumnMapper
             return $class::columnsMapping();
         }
 
-        if (PHP_VERSION_ID >= 80000) {
-            $columns   = [];
-            $refClass  = new \ReflectionClass($class);
-            while ($refClass) {
-                foreach ($refClass->getProperties() as $property) {
-                    if ($property->getDeclaringClass()->getName() !== $refClass->getName()) {
-                        continue;
-                    }
-
-                    foreach ($property->getAttributes(
-                        Column::class,
-                        \ReflectionAttribute::IS_INSTANCEOF
-                    ) as $attr) {
-                        $instance = $attr->newInstance();
-                        if (method_exists($instance, 'bindProperty')) {
-                            $instance->bindProperty($property->getName());
-                        }
-                        $columns[] = $instance;
-                    }
-
-                    foreach ($property->getAttributes(
-                        OneToMany::class,
-                        \ReflectionAttribute::IS_INSTANCEOF
-                    ) as $attr) {
-                        $instance = $attr->newInstance();
-                        if (method_exists($instance, 'bindProperty')) {
-                            $instance->bindProperty($property->getName());
-                        }
-                        $columns[] = $instance;
-                    }
+        $columns   = [];
+        $refClass  = new \ReflectionClass($class);
+        while ($refClass) {
+            foreach ($refClass->getProperties() as $property) {
+                if ($property->getDeclaringClass()->getName() !== $refClass->getName()) {
+                    continue;
                 }
 
-                $refClass = $refClass->getParentClass();
+                foreach ($property->getAttributes(
+                    Column::class,
+                    \ReflectionAttribute::IS_INSTANCEOF
+                ) as $attr) {
+                    $instance = $attr->newInstance();
+                    if (method_exists($instance, 'bindProperty')) {
+                        $instance->bindProperty($property->getName());
+                    }
+                    $columns[] = $instance;
+                }
+
+                foreach ($property->getAttributes(
+                    OneToMany::class,
+                    \ReflectionAttribute::IS_INSTANCEOF
+                ) as $attr) {
+                    $instance = $attr->newInstance();
+                    if (method_exists($instance, 'bindProperty')) {
+                        $instance->bindProperty($property->getName());
+                    }
+                    $columns[] = $instance;
+                }
             }
 
-            return $columns;
+            $refClass = $refClass->getParentClass();
         }
 
-        if (method_exists($class, 'columnsMapping')) {
-            return $class::columnsMapping();
-        }
-
-        throw new \LogicException(sprintf(
-            'Entity %s must define columns via interface, attribute or static method : ::columnsMapping() or implement %s',
-            is_object($class) ? get_class($class) : $class, TableMetadataInterface::class
-        ));
-
+        return $columns;
     }
 }

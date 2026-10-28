@@ -18,7 +18,7 @@ abstract class Repository
     private EntityManagerInterface $em;
     private EntityPersistence $ep;
 
-    public function __construct(EntityManagerInterface $em, EventDispatcherInterface $dispatcher = null)
+    public function __construct(EntityManagerInterface $em, ?EventDispatcherInterface $dispatcher = null)
     {
         $this->em = $em;
         $this->ep = new EntityPersistence($em, $dispatcher);

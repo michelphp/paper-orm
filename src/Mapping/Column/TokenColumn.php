@@ -10,7 +10,7 @@ final class TokenColumn extends Column
 
     private int $length;
     public function __construct(
-        string $name = null,
+        ?string $name = null,
         int    $length = 128,
         bool   $nullable = false,
         ?int $defaultValue = null

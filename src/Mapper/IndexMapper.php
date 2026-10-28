@@ -40,28 +40,19 @@ final class IndexMapper
             return $class::getIndexes();
         }
 
-        if (PHP_VERSION_ID >= 80000) {
-            $indexes = self::getIndexesPHP8($class);
-            if (!empty($indexes)) {
-                return $indexes;
-            }
-
-            if (!method_exists($class, 'getIndexes')) {
-                return [];
-            }
+        $indexes = self::getIndexAttributes($class);
+        if (!empty($indexes)) {
+            return $indexes;
         }
 
         if (method_exists($class, 'getIndexes')) {
             return $class::getIndexes();
         }
 
-        throw new \LogicException(sprintf(
-            'Entity %s must define a Index via interface, attribute or static method',
-            is_object($class) ? get_class($class) : $class
-        ));
+        return [];
     }
 
-    static private function getIndexesPHP8($class): array
+    static private function getIndexAttributes($class): array
     {
         if ($class instanceof ProxyInterface) {
             $class = $class->__getParentClass();

@@ -8,9 +8,9 @@ use Michel\PaperORM\Types\JsonType;
 final class JsonColumn extends Column
 {
     public function __construct(
-        string $name = null,
+        ?string $name = null,
         bool   $nullable = false,
-        array $defaultValue = null
+        ?array $defaultValue = null
     )
     {
         parent::__construct('', $name, JsonType::class, $nullable, $defaultValue);

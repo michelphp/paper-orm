@@ -46,33 +46,6 @@ class PostTest implements EntityInterface
         $this->comments = new ObjectStorage();
     }
 
-    static public function getTableName(): string
-    {
-        return 'post';
-    }
-
-    static public function getRepositoryName(): string
-    {
-        return PostTestRepository::class;
-    }
-
-    static public function columnsMapping(): array
-    {
-        if (PHP_VERSION_ID > 80000) {
-            return [];
-        }
-        return [
-            (new PrimaryKeyColumn())->bindProperty('id'),
-            (new StringColumn())->bindProperty('title'),
-            (new StringColumn())->bindProperty('content'),
-            (new SlugColumn(null, ['title']))->bindProperty('slug'),
-            (new DateTimeColumn( null))->bindProperty('createdAt'),
-            (new JoinColumn('user_id', UserTest::class, 'id', true, false, JoinColumn::SET_NULL))->bindProperty('user'),
-            (new OneToMany( TagTest::class, 'post'))->bindProperty('tags'),
-            (new OneToMany( CommentTest::class, 'post'))->bindProperty('comments'),
-        ];
-    }
-
     public function getPrimaryKeyValue(): ?int
     {
         return $this->getId();

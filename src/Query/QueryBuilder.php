@@ -552,7 +552,7 @@ final class QueryBuilder
         return [$where, $rawWhere, $params];
     }
 
-    public function getAliasesFromEntityName(string $entityName, string $property = null): array
+    public function getAliasesFromEntityName(string $entityName, ?string $property = null): array
     {
         $aliases = [];
         if (isset($this->select['entityName']) && $this->select['entityName'] === $entityName) {

@@ -51,11 +51,9 @@ final class EntityMapper
             return $class::getTableName();
         }
 
-        if (PHP_VERSION_ID >= 80000) {
-            $entity = self::getEntityPHP8($class);
-            if ($entity instanceof Entity) {
-                return $entity->getTable();
-            }
+        $entity = self::getEntityAttribute($class);
+        if ($entity instanceof Entity) {
+            return $entity->getTable();
         }
 
         if (method_exists($class, 'getTableName')) {
@@ -78,11 +76,9 @@ final class EntityMapper
             return $class::getRepositoryName();
         }
 
-        if (PHP_VERSION_ID >= 80000) {
-            $entity = self::getEntityPHP8($class);
-            if ($entity instanceof Entity) {
-                return $entity->getRepositoryClass();
-            }
+        $entity = self::getEntityAttribute($class);
+        if ($entity instanceof Entity) {
+            return $entity->getRepositoryClass();
         }
 
         if (method_exists($class, 'getRepositoryName')) {
@@ -95,7 +91,7 @@ final class EntityMapper
         ));
     }
 
-    static private function getEntityPHP8($class): ?Entity
+    static private function getEntityAttribute($class): ?Entity
     {
         if ($class instanceof ProxyInterface) {
             $class = $class->__getParentClass();

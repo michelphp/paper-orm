@@ -12,13 +12,10 @@
     "psr-4": {
       "Michel\\PaperORM\\": "src",
       "Test\\Michel\\PaperORM\\": "tests"
-    },
-    "files": [
-      "functions/helpers.php"
-    ]
+    }
   },
   "require": {
-    "php": ">=7.4",
+    "php": ">=8.2",
     "ext-pdo": "*",
     "ext-json": "*",
     "ext-ctype": "*",

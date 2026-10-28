@@ -10,9 +10,9 @@ final class DecimalColumn extends Column
 {
 
     public function __construct(
-        string $name = null,
+        ?string $name = null,
         bool   $nullable = false,
-        string $defaultValue = null,
+        ?string $defaultValue = null,
         int    $precision = 10,
         int    $scale = 2,
         bool   $unique = false

@@ -53,7 +53,7 @@ class EntityManager implements EntityManagerInterface
         $this->unitOfWork->remove($entity);
     }
 
-    public function flush(object $entity = null ): void
+    public function flush(?object $entity = null ): void
     {
         foreach ($this->unitOfWork->getEntityInsertions() as &$entityToInsert) {
             if ($entity && $entity !== $entityToInsert) {
@@ -112,7 +112,7 @@ class EntityManager implements EntityManagerInterface
                 $repository = new class($entity, $this, $dispatcher) extends Repository {
                     private string $entityName;
 
-                    public function __construct($entityName, EntityManager $em, EventDispatcherInterface $dispatcher = null)
+                    public function __construct($entityName, EntityManager $em, ?EventDispatcherInterface $dispatcher = null)
                     {
                         $this->entityName = $entityName;
                         parent::__construct($em, $dispatcher);

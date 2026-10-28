@@ -9,10 +9,10 @@ use Michel\PaperORM\Types\StringType;
 final class StringColumn extends Column
 {
     public function __construct(
-        string $name = null,
+        ?string $name = null,
         int $length = 255,
         bool   $nullable = false,
-        string $defaultValue = null,
+        ?string $defaultValue = null,
         bool $unique = false
     )
     {

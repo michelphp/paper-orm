@@ -9,9 +9,9 @@ use Michel\PaperORM\Types\AnyType;
 final class AnyColumn extends Column
 {
     public function __construct(
-        string $name = null,
+        ?string $name = null,
         bool   $nullable = false,
-        string $defaultValue = null
+        ?string $defaultValue = null
     )
     {
         parent::__construct('', $name, AnyType::class, $nullable, $defaultValue);

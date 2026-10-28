@@ -10,7 +10,7 @@ final class DateTimeColumn extends Column
 {
 
     public function __construct(
-        string $name = null,
+        ?string $name = null,
         bool   $nullable = false
     )
     {

@@ -15,7 +15,7 @@ final class OneToMany
     private array $criteria;
     private ObjectStorage $storage;
 
-    final public function __construct(string $targetEntity, string $mappedBy = null, array $criteria = [])
+    final public function __construct(string $targetEntity, ?string $mappedBy = null, array $criteria = [])
     {
         $this->targetEntity = $targetEntity;
         $this->mappedBy = $mappedBy;
