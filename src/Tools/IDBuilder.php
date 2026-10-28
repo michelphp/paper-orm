@@ -18,11 +18,7 @@ final class IDBuilder
     public static function generate(string $format): string
     {
         $format = trim($format);
-        $format = strtoupper($format);
         $now = new \DateTimeImmutable();
-
-        // Note: I've included the PHP native logic for the tokens you provided
-        // and fixed the minute/second token naming for clarity (using {ii} and {ss}).
 
         $tokens = [
             // Date/Time Tokens
