@@ -13,7 +13,7 @@ final class AutoIncrementColumn extends Column
     private int $pad;
     private ?string $prefix;
     public function __construct(
-        string  $name = null,
+        ?string $name = null,
         ?string $key = null,
         int     $pad = 6,
         ?string $prefix = null,
