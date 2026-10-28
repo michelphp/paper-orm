@@ -33,7 +33,7 @@ class EntityPersistence
     private \SplObjectStorage $managed;
 
     private ?EventDispatcherInterface $dispatcher;
-    public function __construct(EntityManagerInterface $em, EventDispatcherInterface $dispatcher = null)
+    public function __construct(EntityManagerInterface $em, ?EventDispatcherInterface $dispatcher = null)
     {
         $this->em = $em;
         $this->platform = $em->getPlatform();
@@ -47,7 +47,7 @@ class EntityPersistence
          * @var EntityInterface $entity
          */
         $this->checkEntity($entity);
-        if ($entity->getPrimaryKeyValue() !== null || $this->managed->contains($entity)) {
+        if ($entity->getPrimaryKeyValue() !== null || isset($this->managed[$entity])) {
             throw new \LogicException(sprintf(
                 '%s cannot insert entity of type "%s": entity already managed (has primary key, is a proxy, or is attached).',
                 static::class,
@@ -75,7 +75,7 @@ class EntityPersistence
             if ($rows > 0) {
                 $primaryKeyColumn = ColumnMapper::getPrimaryKeyColumnName($entity);
                 (new ReadOnlyEntityHydrator($schema))->hydrate($entity, [$primaryKeyColumn => $lastInsertId]);
-                $this->managed->attach($entity);
+                $this->managed[$entity] = null;
                 if ($this->dispatcher) {
                     $this->dispatcher->dispatch(new PostCreateEvent($this->em, $entity));
                 }
@@ -164,8 +164,8 @@ class EntityPersistence
             if ($entity instanceof ProxyInterface) {
                 $entity->__destroy();
             }
-            if ($this->managed->contains($entity)) {
-                $this->managed->detach($entity);
+            if (isset($this->managed[$entity])) {
+                unset($this->managed[$entity]);
             }
 
             if ($this->dispatcher) {
@@ -197,7 +197,7 @@ class EntityPersistence
         }
 
         if ($requireManaged) {
-            $isManaged = $this->managed->contains($entity);
+            $isManaged = isset($this->managed[$entity]);
             $isProxy = $entity instanceof ProxyInterface && $entity->__isInitialized();
             if (!$isManaged && !$isProxy) {
                 throw new \LogicException(sprintf(

@@ -10,7 +10,7 @@ class ObjectStorage extends SplObjectStorage
     public function __construct(array $data = [])
     {
         foreach ($data as $item) {
-            $this->attach($item);
+            $this->offsetSet($item);
         }
     }
 
@@ -135,8 +135,9 @@ class ObjectStorage extends SplObjectStorage
      */
     public function clear(): void
     {
-        foreach ($this as $item) {
-            $this->detach($item);
+        // Over a copy: removing the current object of a SplObjectStorage while iterating it skips the next one.
+        foreach ($this->toArray() as $item) {
+            $this->offsetUnset($item);
         }
     }
 
@@ -148,7 +149,7 @@ class ObjectStorage extends SplObjectStorage
      */
     public function add(object $object): self
     {
-        $this->attach($object);
+        $this->offsetSet($object);
         return $this;
     }
 
@@ -160,7 +161,7 @@ class ObjectStorage extends SplObjectStorage
      */
     public function remove(object $object): self
     {
-        $this->detach($object);
+        $this->offsetUnset($object);
         return $this;
     }
 

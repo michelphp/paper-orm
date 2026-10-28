@@ -36,6 +36,24 @@ class ObjectStorageTest extends TestCase
         $this->testFindPkWithNonExistentPrimaryKey();
         $this->testFindPkWithExistingPrimaryKey();
         $this->testFindOneBy();
+        $this->testAddRemoveAndClear();
+    }
+
+    public function testAddRemoveAndClear()
+    {
+        $objects = [new \stdClass(), new \stdClass(), new \stdClass(), new \stdClass(), new \stdClass()];
+        $collection = new ObjectStorage($objects);
+        $this->assertCount(5, $collection);
+
+        $collection->remove($objects[0])->add($objects[0])->add($objects[0]);
+        $this->assertCount(5, $collection);
+        $collection->remove($objects[1]);
+        $this->assertCount(4, $collection);
+
+        // Removing while iterating must not skip any object.
+        $collection->clear();
+        $this->assertCount(0, $collection);
+        $this->assertTrue($collection->isEmpty());
     }
     public function testFind()
     {

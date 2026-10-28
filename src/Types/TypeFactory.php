@@ -24,7 +24,7 @@ final class TypeFactory
             self::$instances = new \SplObjectStorage();
         }
 
-        $types = self::$instances->contains($schema) ? self::$instances[$schema] : [];
+        $types = isset(self::$instances[$schema]) ? self::$instances[$schema] : [];
         if (!isset($types[$typeClass])) {
             $type = new $typeClass($schema);
             if (!$type instanceof Type) {
