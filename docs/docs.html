@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PaperORM documentation</title>
+<meta name="description" content="Install and use PaperORM: configuration, entity mapping, migrations, persistence, repositories, pagination with one-to-many joins, query builder, transactions, events, registry and the Symfony bundle.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="logo" href="./">paper-orm<span>/</span></a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="./">Home</a>
+      <a href="docs.html">Documentation</a>
+      <a href="https://github.com/michelphp/paper-orm">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+<div class="docs">
+
+<nav class="toc" aria-label="Documentation">
+  <ol>
+    <li><a href="#install">1. Install</a></li>
+    <li><a href="#quick-start">2. Quick start</a></li>
+    <li><a href="#config">3. Configuration</a></li>
+    <li><a href="#entities">4. Entities</a></li>
+    <li><a href="#relations">5. Relations</a></li>
+    <li><a href="#migrations">6. Migrations</a></li>
+    <li><a href="#persist">7. Insert, update, delete</a></li>
+    <li><a href="#auto">8. Generated values</a></li>
+    <li><a href="#find">9. Repositories</a></li>
+    <li><a href="#pagination">10. Pagination</a></li>
+    <li><a href="#qb">11. Query builder</a></li>
+    <li><a href="#transactions">12. Transactions</a></li>
+    <li><a href="#events">13. Events</a></li>
+    <li><a href="#registry">14. Registry and sequences</a></li>
+    <li><a href="#debug">15. Debugging</a></li>
+    <li><a href="#symfony">16. Symfony bundle</a></li>
+  </ol>
+</nav>
+
+<article>
+<h1>Documentation</h1>
+<p>Everything PaperORM does, in the order you need it. PaperORM never runs a query you did not ask for: no lazy loading, no cascade, no transaction opened for you.</p>
+
+<h2 id="install">1. Install</h2>
+<pre>$ composer require michel/paper-orm</pre>
+<div class="table-box">
+<table>
+  <thead><tr><th>Requirement</th><th>Version</th></tr></thead>
+  <tbody>
+    <tr><td>PHP</td><td>8.2 or later, with <code>pdo</code>, <code>json</code>, <code>ctype</code>, <code>iconv</code></td></tr>
+    <tr><td>SQLite</td><td><code>pdo_sqlite</code></td></tr>
+    <tr><td>MariaDB / MySQL</td><td><code>pdo_mysql</code></td></tr>
+  </tbody>
+</table>
+</div>
+<p>On Symfony, install the bundle instead: it brings PaperORM with it. See <a href="#symfony">Symfony bundle</a>.</p>
+
+<h2 id="quick-start">2. Quick start</h2>
+<p>Create the entity manager once, from a DSN:</p>
+<pre><span class="k">use</span> Michel\PaperORM\EntityManager;
+<span class="k">use</span> Michel\PaperORM\PaperConfiguration;
+
+$em = EntityManager::createFromConfig(
+    PaperConfiguration::fromDsn(<span class="v">'sqlite:///var/data/app.sqlite'</span>)
+);</pre>
+<p>Describe a table with attributes:</p>
+<pre><span class="k">use</span> Michel\PaperORM\Entity\EntityInterface;
+<span class="k">use</span> Michel\PaperORM\Mapping\Entity;
+<span class="k">use</span> Michel\PaperORM\Mapping\Column\{PrimaryKeyColumn, StringColumn, BoolColumn};
+
+<span class="k">#[Entity(table: 'user')]</span>
+<span class="k">class</span> User <span class="k">implements</span> EntityInterface
+{
+    <span class="k">#[PrimaryKeyColumn]</span>
+    <span class="k">private</span> ?int $id = <span class="v">null</span>;
+
+    <span class="k">#[StringColumn]</span>
+    <span class="k">private</span> ?string $email = <span class="v">null</span>;
+
+    <span class="k">#[BoolColumn(name: 'is_active')]</span>
+    <span class="k">private</span> bool $active = <span class="v">true</span>;
+
+    <span class="k">public function</span> getPrimaryKeyValue(): ?int { <span class="k">return</span> $this->id; }
+
+    <span class="c">// getters and setters...</span>
+}</pre>
+<p>Create the table (see <a href="#migrations">Migrations</a>), then write and read:</p>
+<pre>$user = (<span class="k">new</span> User())->setEmail(<span class="v">'jane@example.com'</span>);
+$em->persist($user);
+$em->flush();                                   <span class="c">// INSERT, $user->getId() is set</span>
+
+$users = $em->getRepository(User::<span class="k">class</span>)
+    ->findBy([<span class="v">'active'</span> => <span class="v">true</span>])
+    ->orderBy(<span class="v">'email'</span>)
+    ->limit(<span class="v">20</span>)
+    ->toObject();                               <span class="c">// User[]</span></pre>
+
+<h2 id="config">3. Configuration</h2>
+<h3>From a DSN</h3>
+<div class="table-box">
+<table>
+  <thead><tr><th>Database</th><th>DSN</th></tr></thead>
+  <tbody>
+    <tr><td>SQLite file</td><td><code>sqlite:///absolute/path/app.sqlite</code></td></tr>
+    <tr><td>SQLite in memory</td><td><code>sqlite:///:memory:</code></td></tr>
+    <tr><td>MariaDB</td><td><code>mariadb://user:password@127.0.0.1:3306/app?charset=utf8mb4</code></td></tr>
+    <tr><td>MySQL</td><td><code>mysql://user:password@127.0.0.1:3306/app?charset=utf8mb4</code></td></tr>
+  </tbody>
+</table>
+</div>
+<h3>From an array</h3>
+<pre>$config = PaperConfiguration::fromArray([
+    <span class="k">'driver'</span>   => <span class="v">'mariadb'</span>,      <span class="c">// sqlite, mariadb or mysql</span>
+    <span class="k">'host'</span>     => <span class="v">'127.0.0.1'</span>,
+    <span class="k">'port'</span>     => <span class="v">3306</span>,
+    <span class="k">'dbname'</span>   => <span class="v">'app'</span>,
+    <span class="k">'user'</span>     => <span class="v">'app'</span>,
+    <span class="k">'password'</span> => <span class="v">'secret'</span>,
+    <span class="k">'options'</span>  => [<span class="k">'charset'</span> => <span class="v">'utf8mb4'</span>],
+]);</pre>
+<p>For SQLite, pass <code>'path' =&gt; '/absolute/path/app.sqlite'</code> or <code>'memory' =&gt; true</code>.</p>
+<h3>Options</h3>
+<pre>$config = PaperConfiguration::fromDsn($dsn, debug: <span class="v">true</span>);  <span class="c">// records every query</span>
+$config->withLogger($psr3Logger);                            <span class="c">// any PSR-3 logger</span>
+$config->withListener(PreCreateEvent::<span class="k">class</span>, $listener);    <span class="c">// see Events</span>
+
+$em = EntityManager::createFromConfig($config);</pre>
+<div class="note"><strong>One entity manager per request.</strong> It keeps the entities it loaded. In a long-running worker, call <code>$em-&gt;clear()</code> between two jobs; the Symfony bundle does it for you.</div>
+
+<h2 id="entities">4. Entities</h2>
+<p>An entity is a plain class that implements <code>EntityInterface</code> (one method, <code>getPrimaryKeyValue()</code>) and carries the <code>#[Entity]</code> attribute.</p>
+<pre><span class="k">#[Entity(table: 'post', repository: PostRepository::class)]</span>   <span class="c">// repository is optional</span></pre>
+<h3>Columns</h3>
+<p>Each attribute takes the column <code>name</code> as first argument; by default it is the property name. All of them are in <code>Michel\PaperORM\Mapping\Column</code>.</p>
+<div class="table-box">
+<table>
+  <thead><tr><th>Attribute</th><th>PHP type</th><th>Main arguments</th></tr></thead>
+  <tbody>
+    <tr><td><code>PrimaryKeyColumn</code></td><td><code>?int</code></td><td>Auto-incremented by the database. One per entity.</td></tr>
+    <tr><td><code>StringColumn</code></td><td><code>?string</code></td><td><code>length: 255</code>, <code>nullable</code>, <code>defaultValue</code>, <code>unique</code></td></tr>
+    <tr><td><code>TextColumn</code></td><td><code>?string</code></td><td><code>nullable</code>, <code>defaultValue</code></td></tr>
+    <tr><td><code>IntColumn</code></td><td><code>?int</code></td><td><code>nullable</code>, <code>defaultValue</code>, <code>unique</code></td></tr>
+    <tr><td><code>FloatColumn</code></td><td><code>?float</code></td><td><code>nullable</code>, <code>defaultValue</code>, <code>unique</code></td></tr>
+    <tr><td><code>DecimalColumn</code></td><td><code>?string</code></td><td><code>precision: 10</code>, <code>scale: 2</code>, <code>nullable</code>, <code>unique</code></td></tr>
+    <tr><td><code>BoolColumn</code></td><td><code>bool</code></td><td><code>nullable</code>, <code>defaultValue</code></td></tr>
+    <tr><td><code>DateColumn</code>, <code>DateTimeColumn</code></td><td><code>?\DateTimeInterface</code></td><td><code>nullable</code></td></tr>
+    <tr><td><code>JsonColumn</code></td><td><code>?array</code></td><td><code>nullable</code>, <code>defaultValue</code></td></tr>
+    <tr><td><code>BinaryColumn</code></td><td><code>?string</code></td><td><code>nullable</code></td></tr>
+    <tr><td><code>AnyColumn</code></td><td>any</td><td>Stored without conversion.</td></tr>
+    <tr><td><code>TimestampColumn</code>, <code>SlugColumn</code>, <code>TokenColumn</code>, <code>UuidColumn</code>, <code>AutoIncrementColumn</code></td><td></td><td>Filled by PaperORM, see <a href="#auto">Generated values</a>.</td></tr>
+  </tbody>
+</table>
+</div>
+<h3>Indexes</h3>
+<pre><span class="k">#[Entity(table: 'user')]</span>
+<span class="k">#[Index(columns: ['email'], unique: true)]</span>
+<span class="k">class</span> User <span class="k">implements</span> EntityInterface { <span class="c">/* ... */</span> }</pre>
+<h3>Without attributes</h3>
+<p>Implement <code>TableMetadataInterface</code> to describe the table with static methods instead. Attributes and this interface give the same result.</p>
+<pre><span class="k">class</span> Comment <span class="k">implements</span> EntityInterface, TableMetadataInterface
+{
+    <span class="k">public static function</span> getTableName(): string { <span class="k">return</span> <span class="v">'comment'</span>; }
+    <span class="k">public static function</span> getRepositoryName(): ?string { <span class="k">return</span> <span class="v">null</span>; }
+    <span class="k">public static function</span> getIndexes(): array { <span class="k">return</span> []; }
+    <span class="k">public static function</span> columnsMapping(): array
+    {
+        <span class="k">return</span> [
+            (<span class="k">new</span> PrimaryKeyColumn())->bindProperty(<span class="v">'id'</span>),
+            (<span class="k">new</span> TextColumn())->bindProperty(<span class="v">'body'</span>),
+            (<span class="k">new</span> JoinColumn(<span class="v">'post_id'</span>, Post::<span class="k">class</span>))->bindProperty(<span class="v">'post'</span>),
+        ];
+    }
+    <span class="c">// ...</span>
+}</pre>
+
+<h2 id="relations">5. Relations</h2>
+<h3>Many-to-one: JoinColumn</h3>
+<p>The side that holds the foreign key.</p>
+<pre><span class="k">#[JoinColumn(name: 'user_id', targetEntity: User::class, nullable: true, onDelete: JoinColumn::SET_NULL)]</span>
+<span class="k">private</span> ?User $user = <span class="v">null</span>;</pre>
+<p><code>onDelete</code> and <code>onUpdate</code> become the foreign key rules of the database: <code>NO_ACTION</code> (default), <code>RESTRICT</code>, <code>CASCADE</code>, <code>SET_NULL</code>, <code>SET_DEFAULT</code>. The database applies them, never PaperORM. Add <code>unique: true</code> for a one-to-one.</p>
+<h3>One-to-many: OneToMany</h3>
+<p>The inverse side, a collection of the entities that point to this one.</p>
+<pre><span class="k">#[OneToMany(targetEntity: Post::class, mappedBy: 'user')]</span>
+<span class="k">private</span> ObjectStorage $posts;
+
+<span class="k">public function</span> __construct()
+{
+    $this->posts = <span class="k">new</span> ObjectStorage();
+}</pre>
+<p><code>ObjectStorage</code> (<code>Michel\PaperORM\Collection</code>) offers <code>add()</code>, <code>remove()</code>, <code>first()</code>, <code>last()</code>, <code>find()</code>, <code>filter()</code>, <code>findPk()</code>, <code>toArray()</code> and <code>isEmpty()</code>.</p>
+<div class="note"><strong>Relations are never loaded on their own.</strong> Without <code>with()</code> or <code>has()</code>, <code>$user-&gt;getPosts()</code> is empty and <code>$post-&gt;getUser()</code> is <code>null</code>. See <a href="#find">Repositories</a>.</div>
+
+<h2 id="migrations">6. Migrations</h2>
+<p>PaperORM compares your entities with the database and writes the difference as a plain <code>.sql</code> file, with an <code>UP</code> and a <code>DOWN</code> part. You read it, commit it, then run it.</p>
+<pre><span class="k">use</span> Michel\PaperORM\Collector\EntityDirCollector;
+<span class="k">use</span> Michel\PaperORM\Migration\PaperMigration;
+<span class="k">use</span> Michel\PaperORM\Tools\EntityExplorer;
+
+$migration = PaperMigration::create($em, <span class="v">'mig_versions'</span>, __DIR__ . <span class="v">'/migrations'</span>);
+
+<span class="c">// bootstrap() adds the internal tables of PaperORM (registry, sequences)</span>
+$dirs = EntityDirCollector::bootstrap([__DIR__ . <span class="v">'/src/Entity'</span>])->all();
+$found = EntityExplorer::getEntities($dirs);
+
+$file = $migration->generateMigrationFromEntities([...$found[<span class="v">'system'</span>], ...$found[<span class="v">'normal'</span>]]);
+<span class="c">// null when the database already matches</span>
+
+$migration->migrate();                          <span class="c">// runs every migration not yet applied</span></pre>
+<p>Each migration runs in a transaction and is recorded in the table you named (<code>mig_versions</code>). <code>$migration-&gt;down($version)</code> runs the <code>DOWN</code> part of one migration.</p>
+<h3>Console commands</h3>
+<div class="table-box">
+<table>
+  <thead><tr><th>Command</th><th>Effect</th></tr></thead>
+  <tbody>
+    <tr><td><code>paper:migration:diff</code></td><td>Writes a migration file with the difference between entities and database.</td></tr>
+    <tr><td><code>paper:migration:migrate</code></td><td>Runs the migrations not yet applied.</td></tr>
+    <tr><td><code>paper:database:sync</code></td><td>Applies the difference directly, without a file. <code>--no-execute</code> only prints the SQL. For development.</td></tr>
+    <tr><td><code>paper:database:create</code></td><td>Creates the database. <code>--if-not-exists</code>.</td></tr>
+    <tr><td><code>paper:database:drop</code></td><td>Drops the database. Requires <code>--force</code>; development and test only.</td></tr>
+    <tr><td><code>paper:show:tables</code></td><td>Lists the tables, or the columns of one table with <code>--columns</code>.</td></tr>
+    <tr><td><code>paper:query:execute</code></td><td>Runs one SQL query and prints the result.</td></tr>
+  </tbody>
+</table>
+</div>
+<p>With the Symfony bundle they are available in <code>bin/console</code>. Without a framework, run them with <a href="https://github.com/michelphp/console">michel/console</a>:</p>
+<pre><span class="k">use</span> Michel\Console\{CommandParser, CommandRunner, Output};
+<span class="k">use</span> Michel\PaperORM\Command\Migration\{MigrationDiffCommand, MigrationMigrateCommand};
+
+$runner = <span class="k">new</span> CommandRunner([
+    <span class="k">new</span> MigrationDiffCommand($migration, EntityDirCollector::bootstrap([__DIR__ . <span class="v">'/src/Entity'</span>])),
+    <span class="k">new</span> MigrationMigrateCommand($migration),
+]);
+<span class="k">exit</span>($runner->run(<span class="k">new</span> CommandParser(), <span class="k">new</span> Output()));</pre>
+
+<h2 id="persist">7. Insert, update, delete</h2>
+<pre>$em->persist($post);       <span class="c">// new entity: INSERT on flush</span>
+$em->flush();
+
+$post = $repository->find(<span class="v">1</span>)->toObject();
+$post->setTitle(<span class="v">'New title'</span>);
+$em->persist($post);       <span class="c">// loaded entity: UPDATE of the changed columns only</span>
+$em->flush();
+
+$em->remove($post);        <span class="c">// DELETE on flush</span>
+$em->flush();
+
+$em->flush($post);         <span class="c">// writes this entity only</span></pre>
+<p>Entities loaded with <code>toObject()</code> track their changes: an update writes only the columns you modified, and nothing when you modified none.</p>
+<div class="note"><strong>No cascade.</strong> Persisting a user does not persist its posts, and removing it does not remove them. Persist or remove each entity, or let the foreign key rule of the database (<code>onDelete</code>) act.</div>
+
+<h2 id="auto">8. Generated values</h2>
+<p>These columns are filled by PaperORM when the entity is inserted (and updated, for <code>onUpdated</code>).</p>
+<div class="table-box">
+<table>
+  <thead><tr><th>Attribute</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td><code>TimestampColumn(onCreated: true, onUpdated: true)</code></td><td>Current date and time.</td></tr>
+    <tr><td><code>SlugColumn(from: ['title'])</code></td><td>Slug built from other properties: <code>"Hello World"</code> → <code>hello-world</code>.</td></tr>
+    <tr><td><code>TokenColumn(length: 32)</code></td><td>Random hexadecimal token of 16, 32, 64 or 128 (default) characters.</td></tr>
+    <tr><td><code>UuidColumn</code></td><td>Random identifier in the UUID format (36 characters).</td></tr>
+    <tr><td><code>AutoIncrementColumn(key: 'invoice', pad: 6, prefix: 'INV-{YYYY}-')</code></td><td>Numbered sequence: <code>INV-2026-000001</code>, <code>INV-2026-000002</code>…</td></tr>
+  </tbody>
+</table>
+</div>
+<p>The <code>prefix</code> of <code>AutoIncrementColumn</code> accepts <code>{YYYY}</code>, <code>{YY}</code>, <code>{MM}</code>, <code>{DD}</code>, <code>{YMD}</code>, <code>{DATE}</code>. Each distinct prefix keeps its own counter, so <code>INV-{YYYY}-</code> starts again at 1 every year. The counter is stored in the registry table of PaperORM: create it with your migrations (<code>EntityDirCollector::bootstrap()</code> adds it). Two processes never get the same number: the sequence is locked from its read to its increment.</p>
+
+<h2 id="find">9. Repositories</h2>
+<p><code>$em-&gt;getRepository(User::class)</code> returns the repository of the entity. Each method returns a fetcher: chain what you need, then ask for a result.</p>
+<pre>$repository->find(<span class="v">42</span>)->toObject();                         <span class="c">// ?User</span>
+$repository->findOneBy([<span class="v">'email'</span> => $email])->toObject();    <span class="c">// ?User</span>
+$repository->findBy([<span class="v">'active'</span> => <span class="v">true</span>])->toObject();       <span class="c">// User[]</span>
+$repository->findBy()->toCount();                          <span class="c">// int</span></pre>
+<h3>Criteria</h3>
+<p>Keys are property names. Values decide the condition:</p>
+<div class="table-box">
+<table>
+  <thead><tr><th>Value</th><th>Condition</th></tr></thead>
+  <tbody>
+    <tr><td><code>'jane@example.com'</code>, <code>42</code>, <code>true</code></td><td><code>=</code></td></tr>
+    <tr><td><code>[1, 2, 3]</code></td><td><code>IN (1, 2, 3)</code></td></tr>
+    <tr><td><code>null</code></td><td><code>IS NULL</code></td></tr>
+    <tr><td><code>'!NULL'</code></td><td><code>IS NOT NULL</code></td></tr>
+    <tr><td>an entity</td><td><code>=</code> its primary key</td></tr>
+  </tbody>
+</table>
+</div>
+<p>For other operators, use <code>Expr</code> (<code>Michel\PaperORM\Expression\Expr</code>): <code>equal</code>, <code>notEqual</code>, <code>greaterThan</code>, <code>greaterThanEqual</code>, <code>lowerThan</code>, <code>lowerThanEqual</code>, <code>isNull</code>, <code>isNotNull</code>, <code>in</code>, <code>notIn</code>. Values are always bound as parameters.</p>
+<pre>$repository->findBy()
+    ->where(Expr::greaterThanEqual(<span class="v">'createdAt'</span>, <span class="v">'2026-01-01'</span>), Expr::notIn(<span class="v">'id'</span>, [<span class="v">3</span>, <span class="v">7</span>]))
+    ->orderBy(<span class="v">'createdAt'</span>, <span class="v">'DESC'</span>)
+    ->offset(<span class="v">40</span>)->limit(<span class="v">20</span>)
+    ->toObject();</pre>
+<h3>Relations</h3>
+<pre>->with(<span class="v">'posts'</span>)                 <span class="c">// LEFT JOIN: users, with their posts if any</span>
+->has(<span class="v">'posts'</span>)                  <span class="c">// INNER JOIN: only users that have posts</span>
+->with(<span class="v">'lastPost.comments'</span>)     <span class="c">// follow a path of relations</span></pre>
+<h3>Results</h3>
+<div class="table-box">
+<table>
+  <thead><tr><th>Method</th><th>Returns</th></tr></thead>
+  <tbody>
+    <tr><td><code>toObject()</code></td><td>Entities that track their changes, ready to update. The same row gives the same object within an entity manager.</td></tr>
+    <tr><td><code>toReadOnlyObject()</code></td><td>Plain entities, not tracked. Lighter, for display.</td></tr>
+    <tr><td><code>toArray()</code></td><td>Arrays, relations nested under their property name. The fastest.</td></tr>
+    <tr><td><code>toCount()</code></td><td>The number of matching rows.</td></tr>
+    <tr><td><code>toLazyObject()</code>, <code>toLazyArray()</code>, <code>toLazyReadOnlyObject()</code></td><td>A closure that runs the query when you call it.</td></tr>
+  </tbody>
+</table>
+</div>
+<p><code>first()</code> turns any fetcher into a single result or <code>null</code>; <code>find()</code> and <code>findOneBy()</code> already do it.</p>
+<h3>Your own repository</h3>
+<pre><span class="k">final class</span> PostRepository <span class="k">extends</span> Repository
+{
+    <span class="k">public function</span> getEntityName(): string { <span class="k">return</span> Post::<span class="k">class</span>; }
+
+    <span class="k">public function</span> findPublished(): array
+    {
+        <span class="k">return</span> $this->findBy([<span class="v">'published'</span> => <span class="v">true</span>])->orderBy(<span class="v">'createdAt'</span>, <span class="v">'DESC'</span>)->toObject();
+    }
+}</pre>
+<p>Declare it with <code>#[Entity(table: 'post', repository: PostRepository::class)]</code>. Without it, PaperORM gives the entity a default repository.</p>
+
+<h2 id="pagination">10. Pagination</h2>
+<p>A join with a one-to-many relation returns one row per child: a user with 50 posts is 50 rows. A plain SQL <code>LIMIT 10</code> would return a fraction of one user.</p>
+<p>PaperORM counts <strong>root entities</strong>, not rows:</p>
+<pre>$users = $repository->findBy([<span class="v">'active'</span> => <span class="v">true</span>])
+    ->with(<span class="v">'posts'</span>)
+    ->orderBy(<span class="v">'email'</span>)
+    ->offset(<span class="v">20</span>)->limit(<span class="v">10</span>)
+    ->toObject();                 <span class="c">// exactly 10 users, each with all their posts</span></pre>
+<ol>
+  <li>A first query selects the ids of the page, with your conditions and your order, including those on relations.</li>
+  <li>A second query loads those entities and their relations: <code>WHERE id IN (...)</code>.</li>
+</ol>
+<p>Without a one-to-many join, the limit goes straight to the database in one query. Both cases use the same plain SQL on every supported database: no window function, no <code>DISTINCT</code>.</p>
+
+<h2 id="qb">11. Query builder</h2>
+<p>For queries the fetcher cannot express, take the query builder of the repository. Conditions use <code>alias.property</code>; the alias of the root entity comes from <code>getPrimaryAlias()</code>.</p>
+<pre><span class="k">use</span> Michel\PaperORM\Query\QueryBuilder;
+
+$qb = $em->getRepository(User::<span class="k">class</span>)->qb();
+$u = $qb->getPrimaryAlias();
+
+$users = $qb
+    ->leftJoin($u, Post::<span class="k">class</span>, <span class="v">'posts'</span>)
+    ->where(<span class="v">"$u.active = :active"</span>, <span class="v">"$u.id IN (:ids)"</span>)
+    ->setParam(<span class="v">'active'</span>, <span class="v">true</span>)
+    ->setParam(<span class="v">'ids'</span>, [<span class="v">1</span>, <span class="v">2</span>, <span class="v">3</span>])          <span class="c">// a list gets one placeholder per value</span>
+    ->orderBy(<span class="v">"$u.email"</span>)
+    ->setMaxResults(<span class="v">20</span>)
+    ->getResult(QueryBuilder::HYDRATE_ARRAY);</pre>
+<div class="table-box">
+<table>
+  <thead><tr><th>Method</th><th>Use</th></tr></thead>
+  <tbody>
+    <tr><td><code>leftJoin()</code>, <code>innerJoin()</code></td><td>Join a relation: from alias, target entity, property.</td></tr>
+    <tr><td><code>where()</code>, <code>orderBy()</code></td><td>Conditions and order on <code>alias.property</code>.</td></tr>
+    <tr><td><code>rawWhere()</code></td><td>A condition in plain SQL, with column names.</td></tr>
+    <tr><td><code>setParam()</code>, <code>setParams()</code></td><td>Bound values; an entity gives its primary key.</td></tr>
+    <tr><td><code>setFirstResult()</code>, <code>setMaxResults()</code></td><td>Same pagination as the fetcher.</td></tr>
+    <tr><td><code>getResult()</code>, <code>getOneOrNullResult()</code>, <code>getCountResult()</code></td><td>Run it. Hydration: <code>HYDRATE_OBJECT</code> (default), <code>HYDRATE_OBJECT_READONLY</code>, <code>HYDRATE_ARRAY</code>.</td></tr>
+    <tr><td><code>getResultIterator()</code></td><td>Yields the results one by one, for large exports.</td></tr>
+  </tbody>
+</table>
+</div>
+<p>A query built twice with the same shape is turned into SQL only once per connection; only its parameters change.</p>
+
+<h2 id="transactions">12. Transactions</h2>
+<p><code>flush()</code> never opens a transaction. You decide what must succeed or fail together:</p>
+<pre>$pdo = $em->getConnection()->getPdo();
+$pdo->beginTransaction();
+<span class="k">try</span> {
+    $em->persist($order);
+    $em->persist($invoice);
+    $em->flush();
+    $pdo->commit();
+} <span class="k">catch</span> (\Throwable $e) {
+    $pdo->rollBack();
+    <span class="k">throw</span> $e;
+}</pre>
+
+<h2 id="events">13. Events</h2>
+<p>PaperORM dispatches PSR-14 events around each write. Register listeners on the configuration, before creating the entity manager:</p>
+<pre><span class="k">use</span> Michel\PaperORM\Event\Create\PreCreateEvent;
+
+$config->withListener(PreCreateEvent::<span class="k">class</span>, <span class="k">function</span> (PreCreateEvent $event) {
+    $entity = $event->getEntity();
+    $em = $event->getEm();
+});</pre>
+<div class="table-box">
+<table>
+  <thead><tr><th>Event</th><th>When</th></tr></thead>
+  <tbody>
+    <tr><td><code>Create\PreCreateEvent</code>, <code>Create\PostCreateEvent</code></td><td>Before and after an INSERT.</td></tr>
+    <tr><td><code>Update\PreUpdateEvent</code>, <code>Update\PostUpdateEvent</code></td><td>Before and after an UPDATE that changed something.</td></tr>
+    <tr><td><code>Delete\PreDeleteEvent</code>, <code>Delete\PostDeleteEvent</code></td><td>Before and after a DELETE.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="registry">14. Registry and sequences</h2>
+<p>A small key-value store in your database, in the internal table created by your migrations:</p>
+<pre>$em->registry()->set(<span class="v">'maintenance'</span>, <span class="v">'on'</span>);
+$em->registry()->get(<span class="v">'maintenance'</span>);       <span class="c">// 'on', or null</span>
+$em->registry()->remove(<span class="v">'maintenance'</span>);</pre>
+<p>Named counters, used by <code>AutoIncrementColumn</code> and available to you:</p>
+<pre>$em->sequence()->peek(<span class="v">'ticket'</span>);        <span class="c">// next value, without using it</span>
+$em->sequence()->increment(<span class="v">'ticket'</span>);   <span class="c">// use it</span>
+$em->sequence()->reset(<span class="v">'ticket'</span>);</pre>
+<div class="note"><strong>Sequences are locked with a file lock</strong> (<a href="https://github.com/michelphp/lock">michel/lock</a>). It protects processes on the same machine. With several servers writing the same sequence, pass a <code>Locker</code> with a shared lock handler to <code>PaperSequenceManager</code>.</div>
+
+<h2 id="debug">15. Debugging</h2>
+<p>With <code>debug: true</code>, the connection records every query with its parameters and duration, and sends it to the logger given to <code>withLogger()</code>.</p>
+<pre>$debugger = $em->getConnection()->getPdo()->getSqlDebugger();
+$debugger->getQueries();
+$debugger->getQueryCount();
+$debugger->getTotalTime();</pre>
+<p>Leave debug off in production: recording every query costs time and memory.</p>
+
+<h2 id="symfony">16. Symfony bundle</h2>
+<p><a href="https://github.com/michelphp/paper-orm-bundle">michel/paper-orm-bundle</a> integrates PaperORM into Symfony 5.4, 6 and 7.</p>
+<pre>$ composer require michel/paper-orm-bundle</pre>
+<pre><span class="c">// config/bundles.php</span>
+Michel\PaperORMBundle\PaperORMBundle::<span class="k">class</span> => [<span class="v">'all'</span> => <span class="v">true</span>],</pre>
+<pre><span class="c"># config/packages/paper_orm.yaml</span>
+<span class="k">paper_orm:</span>
+  <span class="k">dsn:</span> <span class="v">'%env(resolve:DATABASE_URL)%'</span>
+  <span class="k">debug:</span> <span class="v">'%kernel.debug%'</span></pre>
+<div class="table-box">
+<table>
+  <thead><tr><th>Option</th><th>Default</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>dsn</code></td><td>required</td><td>Database DSN, see <a href="#config">Configuration</a>.</td></tr>
+    <tr><td><code>debug</code></td><td><code>false</code></td><td>Record the queries, shown in the profiler.</td></tr>
+    <tr><td><code>logger</code></td><td><code>paper.logger</code></td><td>Service id of a PSR-3 logger. <code>paper.logger</code> writes to <code>var/log/paper.log</code>. <code>null</code> disables it.</td></tr>
+    <tr><td><code>entity_dir</code></td><td><code>%kernel.project_dir%/src/Entity</code></td><td>Where your entities are.</td></tr>
+    <tr><td><code>migrations_dir</code></td><td><code>%kernel.project_dir%/migrations</code></td><td>Where migration files are written.</td></tr>
+    <tr><td><code>migrations_table</code></td><td><code>mig_versions</code></td><td>Table recording the applied migrations.</td></tr>
+    <tr><td><code>proxy_autoload</code></td><td><code>false</code></td><td>Set to <code>true</code> if you store loaded entities in the session.</td></tr>
+  </tbody>
+</table>
+</div>
+<p>Inject <code>Michel\PaperORM\EntityManagerInterface</code> in your services. The bundle also provides:</p>
+<ul>
+  <li><code>bin/console paper:migration:diff</code>, <code>paper:migration:migrate</code>, <code>paper:database:create</code>, <code>paper:database:drop</code>, <code>paper:database:sync</code>;</li>
+  <li>a profiler panel listing the queries of the request;</li>
+  <li>a reset of the entity manager between two requests in long-running workers (FrankenPHP, RoadRunner, Messenger).</li>
+</ul>
+
+</article>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">PaperORM · <a href="https://github.com/michelphp/paper-orm">Source on GitHub</a> · <a href="https://github.com/michelphp/paper-orm-bundle">Symfony bundle</a></div>
+</footer>
+
+</body>
+</html>

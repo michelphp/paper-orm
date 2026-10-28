@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PaperORM — a light, explicit ORM for PHP 8.2+</title>
+<meta name="description" content="PaperORM is a light and explicit PHP ORM: attribute mapping, repositories, migrations, limit/offset pagination over one-to-many joins, no lazy loading, no cascade, no hidden transaction. SQLite and MariaDB/MySQL.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="logo" href="./">paper-orm<span>/</span></a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="#how">How it works</a>
+      <a href="#why">Why PaperORM</a>
+      <a href="#compare">Compare</a>
+      <a href="docs.html">Documentation</a>
+      <a href="https://github.com/michelphp/paper-orm">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="hero">
+      <p class="eyebrow">PHP 8.2+ · SQLite · MariaDB / MySQL · Symfony bundle</p>
+      <h1>The ORM that does what you wrote, and nothing else.</h1>
+      <p class="lead">Map your entities with attributes, query them through repositories, migrate your schema. No lazy loading, no cascade, no transaction you did not open. Every query runs because you asked for it.</p>
+      <div class="actions">
+        <a class="button primary" href="docs.html#install">Install PaperORM</a>
+        <a class="button" href="docs.html">Read the docs</a>
+      </div>
+    </div>
+  </div>
+
+  <section id="how">
+    <div class="wrap">
+      <p class="label">How it works</p>
+      <h2>Map. Migrate. Query.</h2>
+      <p class="section-lead">Three steps, nothing hidden. Your entities are plain PHP classes, your schema is plain SQL files, your results are plain objects or arrays.</p>
+      <div class="grid">
+        <div class="card">
+          <h3>1. Map</h3>
+          <p>Describe each table with attributes on a plain class: <code>#[Entity]</code>, <code>#[StringColumn]</code>, <code>#[JoinColumn]</code>, <code>#[OneToMany]</code>.</p>
+        </div>
+        <div class="card">
+          <h3>2. Migrate</h3>
+          <p><code>paper:migration:diff</code> compares your entities with the database and writes a <code>.sql</code> file. <code>paper:migration:migrate</code> runs it.</p>
+        </div>
+        <div class="card">
+          <h3>3. Query</h3>
+          <p><code>findBy()</code>, <code>with('posts')</code>, <code>limit(20)</code>, <code>toObject()</code>. You choose the relations to load and the shape of the result.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="why">
+    <div class="wrap">
+      <p class="label">Why PaperORM</p>
+      <h2>Explicit by design.</h2>
+      <p class="section-lead">An ORM should save you from writing SQL by hand, not hide what it sends to your database.</p>
+      <div class="grid">
+        <div class="card">
+          <h3>No surprise query</h3>
+          <p>No lazy loading: a relation is loaded when you ask for it with <code>with()</code> or <code>has()</code>, in the same query. Nothing runs when you read a property.</p>
+        </div>
+        <div class="card">
+          <h3>Paginate one-to-many</h3>
+          <p><code>limit(10)</code> returns 10 users, even when each user brings 50 posts in the same join. Filter and sort on the relations, the page stays right.</p>
+        </div>
+        <div class="card">
+          <h3>Your transactions</h3>
+          <p><code>flush()</code> never opens a transaction behind your back. You wrap what you want, where you want, with PDO.</p>
+        </div>
+        <div class="card">
+          <h3>Small and fast</h3>
+          <p>About 21,000 lines of PHP with its dependencies. Faster than or level with Doctrine on every scenario of the <a href="#compare">bundled benchmark</a>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="compare">
+    <div class="wrap">
+      <p class="label">Compare</p>
+      <h2>Lighter than Doctrine, on purpose.</h2>
+      <p class="section-lead">Doctrine is a complete, mature ORM. PaperORM keeps the part most applications use, and makes every step visible.</p>
+      <div class="table-box">
+        <table>
+          <thead>
+            <tr><th></th><th>Doctrine ORM</th><th class="us">PaperORM</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Relations</td><td>Lazy loaded on access, or fetch-joined in DQL</td><td class="us">Loaded only with <code>with()</code> / <code>has()</code>, in one query</td></tr>
+            <tr><td>Cascade</td><td>Configurable persist / remove cascade</td><td class="us">None: you persist and remove each entity</td></tr>
+            <tr><td>Transactions</td><td><code>flush()</code> opens one</td><td class="us">You open them yourself</td></tr>
+            <tr><td>Limit with one-to-many joins</td><td>Needs the <code>Paginator</code> tool</td><td class="us">Built in: <code>limit()</code> counts root entities</td></tr>
+            <tr><td>Query language</td><td>DQL, QueryBuilder</td><td class="us">Repository fetcher, QueryBuilder, SQL</td></tr>
+            <tr><td>Databases</td><td>Many</td><td class="us">SQLite, MariaDB / MySQL</td></tr>
+            <tr><td>Installed (no dev)</td><td>23 packages · ~171,000 PHP lines</td><td class="us">10 packages · ~21,000 PHP lines</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="section-lead spaced">Median time in milliseconds, 1,000 rows, SQLite in memory, PHP 8.2, one run of <code>benchmark/bench.php</code>. Run it yourself: the benchmark ships with the source.</p>
+      <div class="table-box">
+        <table>
+          <thead>
+            <tr><th>Scenario</th><th>Doctrine ORM</th><th class="us">PaperORM</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Insert 1,000 entities</td><td>29.4</td><td class="us">20.2</td></tr>
+            <tr><td>Find 1,000 entities by id</td><td>44.0</td><td class="us">44.2</td></tr>
+            <tr><td>Load all entities</td><td>6.0</td><td class="us">5.3</td></tr>
+            <tr><td>Load all as arrays</td><td>2.8</td><td class="us">1.8</td></tr>
+            <tr><td>Load with a one-to-many join</td><td>67.5</td><td class="us">45.8</td></tr>
+            <tr><td>Paginate with a one-to-many join</td><td>21.3</td><td class="us">9.9</td></tr>
+            <tr><td>Update 1,000 entities</td><td>23.8</td><td class="us">19.5</td></tr>
+            <tr><td>Delete 1,000 entities</td><td>15.1</td><td class="us">7.6</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="never">
+    <div class="wrap">
+      <p class="label">Scope</p>
+      <h2>What PaperORM will never do</h2>
+      <p class="section-lead">Every rule below is a query you can predict by reading your own code.</p>
+      <ul class="never">
+        <li>lazy-load a relation</li>
+        <li>cascade a persist or a delete</li>
+        <li>open a transaction for you</li>
+        <li>invent a query language</li>
+        <li>query when you read a property</li>
+        <li>require a framework</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="get">
+    <div class="wrap">
+      <p class="label">Get PaperORM</p>
+      <h2>One Composer command.</h2>
+      <p class="section-lead">PaperORM works on its own, in any PHP 8.2+ project. On Symfony, add the bundle: configuration, services, console commands and profiler panel.</p>
+      <pre>$ composer require michel/paper-orm             <span class="c"># any PHP project</span>
+$ composer require michel/paper-orm-bundle      <span class="c"># Symfony</span></pre>
+      <div class="actions">
+        <a class="button primary" href="docs.html#quick-start">Quick start guide</a>
+        <a class="button" href="docs.html#symfony">Symfony bundle</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">PaperORM · <a href="https://github.com/michelphp/paper-orm">Source on GitHub</a> · <a href="https://github.com/michelphp/paper-orm-bundle">Symfony bundle</a> · <a href="docs.html">Documentation</a></div>
+</footer>
+
+</body>
+</html>
