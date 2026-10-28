@@ -20,7 +20,7 @@
     "ext-json": "*",
     "ext-ctype": "*",
     "ext-iconv": "*",
-    "michel/php-sql-mapper": "^1.1",
+    "michel/php-sql-mapper": "^2.0",
     "michel/console": "^1.0",
     "michel/michel-package-starter": "^1.0",
     "michel/filesystem": "^1.0",
